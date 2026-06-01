@@ -1,0 +1,61 @@
+platform :ios, '12.0'
+
+target 'FaceAuthOffline' do
+  pod 'React', :path => '../node_modules/react-native'
+  pod 'React-RCTNetwork', :path => '../node_modules/react-native'
+  pod 'React-RCTVibration', :path => '../node_modules/react-native'
+  pod 'React-RCTImage', :path => '../node_modules/react-native'
+  pod 'React-RCTLinking', :path => '../node_modules/react-native'
+  pod 'React-RCTSettings', :path => '../node_modules/react-native'
+  pod 'React-RCTText', :path => '../node_modules/react-native'
+  pod 'React-RCTAnimation', :path => '../node_modules/react-native'
+
+  pod 'yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
+  pod 'Folly', :podspec => '../node_modules/react-native/third-party-podspecs/Folly.podspec'
+
+  # Vision Camera
+  pod 'react-native-vision-camera', :path => '../node_modules/react-native-vision-camera'
+
+  # Async Storage
+  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-async-storage/async-storage'
+
+  # Network Info
+  pod 'react-native-netinfo', :path => '../node_modules/@react-native-community/netinfo'
+
+  # Keychain
+  pod 'react-native-keychain', :path => '../node_modules/react-native-keychain'
+
+  # SQLite
+  pod 'react-native-sqlite-storage', :path => '../node_modules/react-native-sqlite-storage'
+
+  # File System
+  pod 'RNFSManager', :path => '../node_modules/react-native-fs'
+
+  # Permissions
+  pod 'RNPermissions', :path => '../node_modules/react-native-permissions'
+
+  # Navigation
+  pod 'react-native-screens', :path => '../node_modules/react-native-screens'
+  pod 'react-native-safe-area-context', :path => '../node_modules/react-native-safe-area-context'
+  pod 'react-native-gesture-handler', :path => '../node_modules/react-native-gesture-handler'
+
+  # Reanimated
+  pod 'RNReanimated', :path => '../node_modules/react-native-reanimated'
+
+  # TensorFlow Lite
+  pod 'TensorFlowLiteSwift', '~> 2.11.0'
+  pod 'TensorFlowLiteGpu', '~> 2.11.0'
+  pod 'TensorFlowLiteMetalDelegate', '~> 2.11.0'
+
+  # Core ML
+  pod 'CoreML'
+
+  # ML Kit
+  pod 'Firebase/MLVision'
+  pod 'Firebase/MLVisionFaceModel'
+
+  post_install do |installer|
+    react_native_post_install(installer)
+    __apply_Xcode_12_5_M1_post_install_workaround(installer)
+  end
+end
