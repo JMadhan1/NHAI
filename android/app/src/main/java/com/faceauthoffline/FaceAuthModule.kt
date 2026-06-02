@@ -45,12 +45,12 @@ class FaceAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
           putBoolean("detected", detected.isNotEmpty())
           if (detected.isNotEmpty()) {
             val box = detected[0]
-            putMap("boundingBox", WritableNativeMap().apply {
-              putInt("x", box.left)
-              putInt("y", box.top)
-              putInt("width", box.right - box.left)
-              putInt("height", box.bottom - box.top)
-            })
+            val boundingBox = WritableNativeMap()
+            boundingBox.putDouble("x", box.left.toDouble())
+            boundingBox.putDouble("y", box.top.toDouble())
+            boundingBox.putDouble("width", ((box.right - box.left) as Float).toDouble())
+            boundingBox.putDouble("height", ((box.bottom - box.top) as Float).toDouble())
+            putMap("boundingBox", boundingBox)
           }
         }
         promise.resolve(result)
@@ -88,18 +88,29 @@ class FaceAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
       try {
         val bitmap = decodeBase64ToBitmap(base64Image)
         val landmarks = tfliteEngine.computeLandmarks(bitmap)
+        val landmarksMap = WritableNativeMap()
+
+        if (landmarks.leftEye is List<*>) {
+          landmarksMap.putArray("leftEye", listToWritableArray(landmarks.leftEye as List<Any>))
+        }
+        if (landmarks.rightEye is List<*>) {
+          landmarksMap.putArray("rightEye", listToWritableArray(landmarks.rightEye as List<Any>))
+        }
+        if (landmarks.mouth is List<*>) {
+          landmarksMap.putArray("mouth", listToWritableArray(landmarks.mouth as List<Any>))
+        }
+        if (landmarks.nose is List<*>) {
+          landmarksMap.putArray("nose", listToWritableArray(landmarks.nose as List<Any>))
+        }
+
+        val headPoseMap = WritableNativeMap()
+        headPoseMap.putDouble("yaw", (landmarks.headPose as? Map<String, Any>)?.get("yaw")?.toString()?.toDoubleOrNull() ?: 0.0)
+        headPoseMap.putDouble("pitch", (landmarks.headPose as? Map<String, Any>)?.get("pitch")?.toString()?.toDoubleOrNull() ?: 0.0)
+        headPoseMap.putDouble("roll", (landmarks.headPose as? Map<String, Any>)?.get("roll")?.toString()?.toDoubleOrNull() ?: 0.0)
+        landmarksMap.putMap("headPose", headPoseMap)
+
         val result = WritableNativeMap().apply {
-          putMap("landmarks", WritableNativeMap().apply {
-            putArray("leftEye", arrayToWritable(landmarks.leftEye))
-            putArray("rightEye", arrayToWritable(landmarks.rightEye))
-            putArray("mouth", arrayToWritable(landmarks.mouth))
-            putMap("nose", mapToWritable(landmarks.nose))
-            putMap("headPose", WritableNativeMap().apply {
-              putDouble("yaw", landmarks.headPose.yaw)
-              putDouble("pitch", landmarks.headPose.pitch)
-              putDouble("roll", landmarks.headPose.roll)
-            })
-          })
+          putMap("landmarks", landmarksMap)
         }
         promise.resolve(result)
       } catch (e: Exception) {
@@ -153,6 +164,31 @@ class FaceAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
       result[i] = array.getDouble(i).toFloat()
     }
     return result
+  }
+
+  private fun listToWritableArray(list: List<Any>): WritableArray {
+    val array = WritableNativeArray()
+    list.forEach { item ->
+      when (item) {
+        is Number -> array.pushDouble(item.toDouble())
+        is String -> array.pushString(item)
+        is Boolean -> array.pushBoolean(item)
+        is Map<*, *> -> {
+          val map = WritableNativeMap()
+          (item as Map<String, Any>).forEach { (key, value) ->
+            when (value) {
+              is Number -> map.putDouble(key, value.toDouble())
+              is String -> map.putString(key, value)
+              is Boolean -> map.putBoolean(key, value)
+              else -> map.putNull(key)
+            }
+          }
+          array.pushMap(map)
+        }
+        else -> array.pushNull()
+      }
+    }
+    return array
   }
 
   private fun arrayToWritable(points: List<Pair<Float, Float>>): WritableArray {
