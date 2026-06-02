@@ -125,8 +125,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
-        <Link href="/">
-          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">← Back</a>
+        <Link href="/" className="text-blue-400 hover:text-blue-300 mb-6 inline-block">
+          ← Back
         </Link>
 
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">

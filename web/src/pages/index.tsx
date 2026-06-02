@@ -108,28 +108,23 @@ export default function Home() {
           {/* Main Menu Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {menuItems.map((item, idx) => (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className="group card-modern hover-scale cursor-pointer h-full relative overflow-hidden"
-                  style={{ animationDelay: `${idx * 0.1}s` }}
-                >
-                  {/* Gradient overlay */}
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${item.gradient} blur-xl -z-10`}></div>
+              <Link key={item.href} href={item.href} className="group card-modern hover-scale cursor-pointer h-full relative overflow-hidden block" style={{ animationDelay: `${idx * 0.1}s` }}>
+                {/* Gradient overlay */}
+                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${item.gradient} blur-xl -z-10`}></div>
 
-                  {/* Content */}
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">
-                      {item.icon}
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 group-hover:bg-clip-text transition-all">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors flex-grow">
-                      {item.description}
-                    </p>
-                    <div className="mt-4 flex items-center text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-sm font-medium">Start →</span>
-                    </div>
+                {/* Content */}
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="text-5xl mb-4 group-hover:scale-125 transition-transform duration-300">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 group-hover:bg-clip-text transition-all">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors flex-grow">
+                    {item.description}
+                  </p>
+                  <div className="mt-4 flex items-center text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-sm font-medium">Start →</span>
                   </div>
                 </div>
               </Link>

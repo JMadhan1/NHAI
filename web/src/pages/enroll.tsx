@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+﻿import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { computeEmbedding, detectFace } from '@/lib/tfjs';
@@ -132,7 +132,7 @@ export default function EnrollPage() {
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
         <Link href="/">
-          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">← Back</a>
+          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">â† Back</a>
         </Link>
 
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
@@ -193,13 +193,13 @@ export default function EnrollPage() {
                       faceDetected ? 'bg-green-500' : 'bg-red-500'
                     }`}
                   >
-                    {faceDetected ? '✓' : '✗'}
+                    {faceDetected ? 'âœ“' : 'âœ—'}
                   </div>
                 </div>
               </div>
 
               <p className="text-slate-300 text-center">
-                {faceDetected ? 'Face detected ✓' : 'Position your face in the frame'}
+                {faceDetected ? 'Face detected âœ“' : 'Position your face in the frame'}
               </p>
 
               <div className="flex gap-4">
@@ -224,7 +224,7 @@ export default function EnrollPage() {
           {step === 'confirm' && capturedEmbedding && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-900/20 border border-blue-500 rounded text-blue-300">
-                <p className="font-bold mb-2">✓ Face captured successfully</p>
+                <p className="font-bold mb-2">âœ“ Face captured successfully</p>
                 <p className="text-sm">Confirm to enroll {userName}</p>
               </div>
 
@@ -264,3 +264,4 @@ export default function EnrollPage() {
     </div>
   );
 }
+

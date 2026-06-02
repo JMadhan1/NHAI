@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAuthHistory, getAuthAttemptCount, getSuccessfulAuthCount } from '@/lib/storage';
 import type { AuthAttempt } from '@/types';
@@ -41,15 +41,15 @@ export default function HistoryPage() {
   const getResultLabel = (result: string) => {
     switch (result) {
       case 'SUCCESS':
-        return '✅ Success';
+        return 'âœ… Success';
       case 'FAIL_LIVENESS':
-        return '⚠️ Liveness Failed';
+        return 'âš ï¸ Liveness Failed';
       case 'FAIL_NO_MATCH':
-        return '❌ No Match';
+        return 'âŒ No Match';
       case 'FAIL_NO_FACE':
-        return '❌ No Face';
+        return 'âŒ No Face';
       default:
-        return '❓ Unknown';
+        return 'â“ Unknown';
     }
   };
 
@@ -58,7 +58,7 @@ export default function HistoryPage() {
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link href="/">
-          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">← Back</a>
+          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">â† Back</a>
         </Link>
 
         <h1 className="text-3xl font-bold text-white mb-6">Authentication History</h1>
@@ -108,7 +108,7 @@ export default function HistoryPage() {
                 </div>
 
                 {attempt.synced && (
-                  <p className="text-xs mt-2 opacity-75">✓ Synced to server</p>
+                  <p className="text-xs mt-2 opacity-75">âœ“ Synced to server</p>
                 )}
               </div>
             ))}
@@ -118,3 +118,4 @@ export default function HistoryPage() {
     </div>
   );
 }
+

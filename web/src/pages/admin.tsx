@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { getAllEmbeddings, deleteEmbedding } from '@/lib/storage';
@@ -42,7 +42,7 @@ export default function AdminPage() {
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link href="/">
-          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">← Back</a>
+          <a className="text-blue-400 hover:text-blue-300 mb-6 inline-block">â† Back</a>
         </Link>
 
         <div className="mb-6">
@@ -122,3 +122,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
