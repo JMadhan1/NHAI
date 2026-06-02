@@ -8,17 +8,26 @@ export class FaceAuthDatabase extends Dexie {
   constructor() {
     super('FaceAuthOfflineDB');
     this.version(1).stores({
-      embeddings: '++id, userId, enrolledAt',
-      authAttempts: '++id, userId, timestamp, synced',
+      embeddings: 'id, userId, enrolledAt',
+      authAttempts: 'id, userId, timestamp, synced',
     });
   }
 }
 
 export const db = new FaceAuthDatabase();
 
+// Helper to generate unique IDs
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // Embedding operations
 export async function saveEmbedding(embedding: FaceEmbedding): Promise<void> {
-  await db.embeddings.put(embedding);
+  const embeddingToSave = {
+    ...embedding,
+    id: embedding.id || generateId(),
+  };
+  await db.embeddings.put(embeddingToSave);
 }
 
 export async function getAllEmbeddings(): Promise<FaceEmbedding[]> {
@@ -31,7 +40,11 @@ export async function deleteEmbedding(userId: string): Promise<void> {
 
 // Auth attempt operations
 export async function saveAuthAttempt(attempt: AuthAttempt): Promise<void> {
-  await db.authAttempts.add(attempt);
+  const attemptToSave = {
+    ...attempt,
+    id: attempt.id || generateId(),
+  };
+  await db.authAttempts.put(attemptToSave);
 }
 
 export async function getUnsyncedAttempts(limit: number = 50): Promise<AuthAttempt[]> {
@@ -43,8 +56,10 @@ export async function getUnsyncedAttempts(limit: number = 50): Promise<AuthAttem
 }
 
 export async function markAttemptsSynced(ids: string[]): Promise<void> {
-  await db.authAttempts.bulkUpdate(
-    ids.map(id => ({ key: id, changes: { synced: true } }))
+  await Promise.all(
+    ids.map(id =>
+      db.authAttempts.update(id, { synced: true })
+    )
   );
 }
 
@@ -57,9 +72,9 @@ export async function getAuthHistory(limit: number = 50): Promise<AuthAttempt[]>
 }
 
 export async function purgeLocalSyncedAttempts(): Promise<number> {
-  const count = await db.authAttempts.where('synced').equals(true).count();
-  await db.authAttempts.where('synced').equals(true).delete();
-  return count;
+  const syncedAttempts = await db.authAttempts.where('synced').equals(true).toArray();
+  await db.authAttempts.bulkDelete(syncedAttempts.map(a => a.id));
+  return syncedAttempts.length;
 }
 
 export async function getAuthAttemptCount(userId?: string): Promise<number> {
