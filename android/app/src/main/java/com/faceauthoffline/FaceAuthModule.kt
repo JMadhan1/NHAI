@@ -99,8 +99,8 @@ class FaceAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         if (landmarks.mouth is List<*>) {
           landmarksMap.putArray("mouth", listToWritableArray(landmarks.mouth as List<Any>))
         }
-        if (landmarks.nose is List<*>) {
-          landmarksMap.putArray("nose", listToWritableArray(landmarks.nose as List<Any>))
+        if (landmarks.nose is Pair<*, *>) {
+          landmarksMap.putMap("nose", mapToWritable(mapOf("x" to (landmarks.nose as Pair<Float, Float>).first, "y" to (landmarks.nose as Pair<Float, Float>).second)))
         }
 
         val headPoseMap = WritableNativeMap()

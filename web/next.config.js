@@ -29,9 +29,12 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
+  swcMinify: false,
   images: {
     unoptimized: true,
+  },
+  experimental: {
+    swcPlugins: [],
   },
   webpack: (config, { isServer }) => {
     config.experiments = {

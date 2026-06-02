@@ -10,7 +10,7 @@ import com.facebook.react.common.LifecycleState
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.facebook.react.soloader.OpenSourceMergedSoLoader
+import com.facebook.soloader.SoLoader
 
 class MainApplication : Application(), ReactApplication {
 
@@ -33,15 +33,12 @@ class MainApplication : Application(), ReactApplication {
           get() = BuildConfig.IS_HERMES_ENABLED
       }
 
-  override fun getReactNativeHost(): ReactNativeHost = mReactNativeHost
-
-  private val mReactHost: ReactHost by lazy { getDefaultReactHost(applicationContext, mReactNativeHost) }
-
-  override fun getReactHost(): ReactHost = mReactHost
+  override val reactNativeHost: ReactNativeHost
+    get() = mReactNativeHost
 
   override fun onCreate() {
     super.onCreate()
-    OpenSourceMergedSoLoader.load()
+    SoLoader.init(this, false)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       load()
     }
