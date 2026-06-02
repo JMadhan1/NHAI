@@ -7,10 +7,25 @@ export class FaceAuthDatabase extends Dexie {
 
   constructor() {
     super('FaceAuthOfflineDB');
+
+    // Version 1: Initial schema (deprecated)
     this.version(1).stores({
-      embeddings: 'id, userId, enrolledAt',
-      authAttempts: 'id, userId, timestamp, synced',
+      embeddings: '++id, userId, enrolledAt',
+      authAttempts: '++id, userId, timestamp, synced',
     });
+
+    // Version 2: Switch to string primary keys
+    this.version(2)
+      .stores({
+        embeddings: 'id, userId, enrolledAt',
+        authAttempts: 'id, userId, timestamp, synced',
+      })
+      .upgrade(async (tx) => {
+        // Clear old data when upgrading from v1 to v2
+        // This ensures clean slate with new schema
+        await tx.table('embeddings').clear();
+        await tx.table('authAttempts').clear();
+      });
   }
 }
 
@@ -43,6 +58,7 @@ export async function saveAuthAttempt(attempt: AuthAttempt): Promise<void> {
   const attemptToSave = {
     ...attempt,
     id: attempt.id || generateId(),
+    synced: attempt.synced || false,
   };
   await db.authAttempts.put(attemptToSave);
 }
