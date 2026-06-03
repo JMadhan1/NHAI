@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,57 @@ interface Props {
 }
 
 export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+  const [enrolledCount, setEnrolledCount] = useState(247);
+  const [pendingSyncCount, setPendingSyncCount] = useState(4);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      setCurrentTime(time);
+      setCurrentDate(date);
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <OfflineBanner />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>FaceAuth Offline</Text>
-        <Text style={styles.subtitle}>Facial Recognition & Liveness Detection</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>FaceAuth <Text style={styles.headerSubtitle}>NHAI</Text></Text>
+          <View style={styles.headerRight}>
+            <View style={styles.offlineBadge}>
+              <Text style={styles.offlineText}>● OFFLINE</Text>
+            </View>
+            <TouchableOpacity style={styles.settingsBtn}>
+              <Text style={styles.settingsIcon}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <View style={styles.menuSection}>
+        {/* Greeting Section */}
+        <View style={styles.greetingCard}>
+          <Text style={styles.greetingLabel}>GOOD AFTERNOON</Text>
+          <Text style={styles.greetingTitle}>Field Team</Text>
+          <View style={styles.greetingContent}>
+            <View>
+              <Text style={styles.timeText}>{currentTime}</Text>
+              <Text style={styles.dateText}>{currentDate}</Text>
+            </View>
+            <Text style={styles.greetingIcon}>🔐</Text>
+          </View>
+        </View>
+
+        {/* Menu Grid - 2x2 */}
+        <View style={styles.menuGrid}>
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => onNavigate('Auth')}
@@ -30,7 +73,7 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
           >
             <Text style={styles.cardIcon}>🔐</Text>
             <Text style={styles.cardTitle}>Authenticate</Text>
-            <Text style={styles.cardDesc}>Login with your face</Text>
+            <Text style={styles.cardDesc}>Verify a person's face</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -49,8 +92,8 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             activeOpacity={0.7}
           >
             <Text style={styles.cardIcon}>📋</Text>
-            <Text style={styles.cardTitle}>Auth History</Text>
-            <Text style={styles.cardDesc}>View past attempts</Text>
+            <Text style={styles.cardTitle}>Auth Log</Text>
+            <Text style={styles.cardDesc}>Recent verifications</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -59,26 +102,34 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             activeOpacity={0.7}
           >
             <Text style={styles.cardIcon}>⚙️</Text>
-            <Text style={styles.cardTitle}>Admin Panel</Text>
-            <Text style={styles.cardDesc}>Manage users & settings</Text>
+            <Text style={styles.cardTitle}>Admin</Text>
+            <Text style={styles.cardDesc}>Users & sync control</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}>System Status</Text>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Offline-First:</Text>
-            <Text style={styles.statValue}>✅ Enabled</Text>
+        {/* Stats Bar */}
+        <View style={styles.statsBar}>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>ENROLLED</Text>
+            <Text style={styles.statValue}>{enrolledCount}</Text>
           </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Encryption:</Text>
-            <Text style={styles.statValue}>✅ AES-256</Text>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>PENDING</Text>
+            <Text style={[styles.statValue, { color: '#ff9500' }]}>{pendingSyncCount}</Text>
           </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Database:</Text>
-            <Text style={styles.statValue}>✅ SQLCipher</Text>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>ACCURACY</Text>
+            <Text style={[styles.statValue, { color: '#10b981' }]}>99.1%</Text>
           </View>
         </View>
+
+        {/* Sync Status */}
+        {pendingSyncCount > 0 && (
+          <TouchableOpacity style={styles.syncBanner}>
+            <Text style={styles.syncText}>● {pendingSyncCount} records waiting to sync</Text>
+            <Text style={styles.syncArrow}>→</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
       <SyncStatusBar />
     </SafeAreaView>
@@ -86,25 +137,160 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  content: { padding: 24, paddingBottom: 32 },
-  title: { fontSize: 32, fontWeight: '900', color: '#fff', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.6)', marginBottom: 32, textAlign: 'center' },
-  menuSection: { marginBottom: 32 },
-  menuCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  container: { flex: 1, backgroundColor: '#0a0e27' },
+  content: { padding: 16, paddingBottom: 32 },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    color: '#a0aec0',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  offlineBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 16,
-    padding: 20,
+    borderWidth: 1,
+    borderColor: '#ff9500',
+  },
+  offlineText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ff9500',
+  },
+  settingsBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsIcon: { fontSize: 16 },
+
+  greetingCard: {
+    backgroundColor: 'rgba(21, 26, 58, 0.8)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  greetingLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#718096',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  greetingTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
     marginBottom: 12,
+  },
+  greetingContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  timeText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: 'monospace',
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#a0aec0',
+    marginTop: 4,
+  },
+  greetingIcon: {
+    fontSize: 40,
+  },
+
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  menuCard: {
+    width: '48%',
+    backgroundColor: 'rgba(21, 26, 58, 0.8)',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    padding: 16,
   },
-  cardIcon: { fontSize: 32, marginBottom: 12 },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 4 },
-  cardDesc: { fontSize: 14, color: 'rgba(255,255,255,0.5)' },
-  statsSection: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 16 },
-  statsTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 12 },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  statLabel: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
-  statValue: { fontSize: 14, color: '#4CAF50', fontWeight: '600' },
+  cardIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontSize: 11,
+    color: '#718096',
+  },
+
+  statsBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: 'rgba(21, 26, 58, 0.8)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#718096',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  syncBanner: {
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  syncText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ff9500',
+  },
+  syncArrow: {
+    fontSize: 14,
+    color: '#ff9500',
+  },
 });
