@@ -16,6 +16,7 @@ import { AuthScreen } from './screens/AuthScreen';
 import { EnrollScreen } from './screens/EnrollScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { AdminScreen } from './screens/AdminScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 
 const Stack = createStackNavigator();
 
@@ -78,6 +79,9 @@ const AppContent: React.FC = () => {
         </Stack.Screen>
         <Stack.Screen name="Admin">
           {props => <AdminScreen {...props} onBack={() => props.navigation.goBack()} />}
+        </Stack.Screen>
+        <Stack.Screen name="Settings">
+          {props => <SettingsScreen {...props} onBack={() => props.navigation.goBack()} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>

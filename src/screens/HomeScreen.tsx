@@ -14,9 +14,17 @@ interface Props {
   onNavigate: (screen: string) => void;
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'GOOD MORNING';
+  if (hour < 17) return 'GOOD AFTERNOON';
+  return 'GOOD EVENING';
+}
+
 export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [greeting, setGreeting] = useState(getGreeting());
   const [enrolledCount, setEnrolledCount] = useState(247);
   const [pendingSyncCount, setPendingSyncCount] = useState(4);
 
@@ -27,6 +35,7 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
       const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       setCurrentTime(time);
       setCurrentDate(date);
+      setGreeting(getGreeting());
     };
 
     updateTime();
@@ -40,12 +49,12 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>FaceAuth <Text style={styles.headerSubtitle}>NHAI</Text></Text>
+          <Text style={styles.headerTitle}>TollGuard <Text style={styles.headerSubtitle}>AI</Text></Text>
           <View style={styles.headerRight}>
             <View style={styles.offlineBadge}>
               <Text style={styles.offlineText}>● OFFLINE</Text>
             </View>
-            <TouchableOpacity style={styles.settingsBtn}>
+            <TouchableOpacity style={styles.settingsBtn} onPress={() => onNavigate('Settings')}>
               <Text style={styles.settingsIcon}>⚙️</Text>
             </TouchableOpacity>
           </View>
@@ -53,8 +62,8 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
 
         {/* Greeting Section */}
         <View style={styles.greetingCard}>
-          <Text style={styles.greetingLabel}>GOOD AFTERNOON</Text>
-          <Text style={styles.greetingTitle}>Field Team</Text>
+          <Text style={styles.greetingLabel}>{greeting}</Text>
+          <Text style={styles.greetingTitle}>Toll Plaza Team</Text>
           <View style={styles.greetingContent}>
             <View>
               <Text style={styles.timeText}>{currentTime}</Text>

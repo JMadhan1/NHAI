@@ -40,8 +40,13 @@ class TFLiteInferenceEngine(private val context: Context) {
       }
 
       blazefaceInterpreter = loadInterpreterFromAsset("blazeface.tflite")
-      facemeshInterpreter = loadInterpreterFromAsset("face_mesh.tflite")
       mobilefacenetInterpreter = loadInterpreterFromAsset("mobilefacenet_int8.tflite")
+
+      try {
+        facemeshInterpreter = loadInterpreterFromAsset("face_mesh.tflite")
+      } catch (e: Exception) {
+        Log.w(TAG, "face_mesh.tflite not found, landmarks will be unavailable: ${e.message}")
+      }
 
       Log.d(TAG, "Models loaded successfully")
       true
