@@ -201,7 +201,7 @@ export const AdminScreen: React.FC<Props> = ({ onBack, onNavigate }) => {
                 <View style={s.userInfo}>
                   <Text style={s.userName}>{item.userName}</Text>
                   <Text style={s.userId}>{item.userId}</Text>
-                  <Text style={s.userMeta}>Enrolled {formatDate(item.enrolledAt)}  ·  128D embedding</Text>
+                  <Text style={s.userMeta}>Enrolled {formatDate(item.enrolledAt)}  ·  192D embedding</Text>
                 </View>
                 <TouchableOpacity
                   style={s.delBtn}

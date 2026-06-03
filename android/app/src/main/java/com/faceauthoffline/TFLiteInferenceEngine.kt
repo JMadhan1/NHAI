@@ -43,9 +43,9 @@ class TFLiteInferenceEngine(private val context: Context) {
       mobilefacenetInterpreter = loadInterpreterFromAsset("mobilefacenet_int8.tflite")
 
       try {
-        facemeshInterpreter = loadInterpreterFromAsset("face_mesh.tflite")
+        facemeshInterpreter = loadInterpreterFromAsset("face_landmark.tflite")
       } catch (e: Exception) {
-        Log.w(TAG, "face_mesh.tflite not found, landmarks will be unavailable: ${e.message}")
+        Log.w(TAG, "face_landmark.tflite not found, landmarks will be unavailable: ${e.message}")
       }
 
       Log.d(TAG, "Models loaded successfully")
@@ -62,8 +62,8 @@ class TFLiteInferenceEngine(private val context: Context) {
       val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_WIDTH, INPUT_HEIGHT, true)
       val inputBuffer = bitmapToByteBuffer(resizedBitmap)
 
-      val outputBoxes = Array(1) { FloatArray(FACE_DETECTIONS * 16) }
-      val outputScores = Array(1) { FloatArray(FACE_DETECTIONS) }
+      val outputBoxes = Array(1) { Array(BLAZEFACE_DETECTIONS) { FloatArray(16) } }
+      val outputScores = Array(1) { Array(BLAZEFACE_DETECTIONS) { FloatArray(1) } }
 
       val outputs = mapOf(
         0 to outputBoxes,
@@ -73,14 +73,14 @@ class TFLiteInferenceEngine(private val context: Context) {
       interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer), outputs)
 
       val detections = mutableListOf<RectF>()
-      for (i in 0 until FACE_DETECTIONS) {
-        val score = outputScores[0][i]
+      for (i in 0 until BLAZEFACE_DETECTIONS) {
+        val score = outputScores[0][i][0]
         if (score > CONFIDENCE_THRESHOLD) {
-          val offset = i * 16
-          val xMin = (outputBoxes[0][offset + 0] * bitmap.width).toInt()
-          val yMin = (outputBoxes[0][offset + 1] * bitmap.height).toInt()
-          val xMax = (outputBoxes[0][offset + 2] * bitmap.width).toInt()
-          val yMax = (outputBoxes[0][offset + 3] * bitmap.height).toInt()
+          val box = outputBoxes[0][i]
+          val xMin = (box[0] * bitmap.width).toInt()
+          val yMin = (box[1] * bitmap.height).toInt()
+          val xMax = (box[2] * bitmap.width).toInt()
+          val yMax = (box[3] * bitmap.height).toInt()
           detections.add(RectF(xMin.toFloat(), yMin.toFloat(), xMax.toFloat(), yMax.toFloat()))
         }
       }
@@ -128,10 +128,10 @@ class TFLiteInferenceEngine(private val context: Context) {
   fun getEmbedding(bitmap: Bitmap): FloatArray? {
     return try {
       val interpreter = mobilefacenetInterpreter ?: return null
-      val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 160, 160, true)
+      val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 112, 112, true)
       val inputBuffer = bitmapToByteBuffer(resizedBitmap)
 
-      val output = Array(1) { FloatArray(128) }
+      val output = Array(1) { FloatArray(192) }
       interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer), mapOf(0 to output))
       output[0]
     } catch (e: Exception) {
@@ -206,7 +206,7 @@ class TFLiteInferenceEngine(private val context: Context) {
     private const val TAG = "TFLiteEngine"
     private const val INPUT_WIDTH = 128
     private const val INPUT_HEIGHT = 128
-    private const val FACE_DETECTIONS = 10
-    private const val CONFIDENCE_THRESHOLD = 0.85f
+    private const val BLAZEFACE_DETECTIONS = 896
+    private const val CONFIDENCE_THRESHOLD = 0.75f
   }
 }

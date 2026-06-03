@@ -169,7 +169,7 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             <View style={styles.primaryIcon}><Text style={{ fontSize: 26 }}>🔐</Text></View>
             <View>
               <Text style={styles.primaryTitle}>Authenticate Face</Text>
-              <Text style={styles.primarySub}>Liveness · 128D matching · AES-256</Text>
+              <Text style={styles.primarySub}>Liveness · 192D matching · AES-256</Text>
             </View>
           </View>
           <View style={styles.primaryArrow}><Text style={styles.primaryArrowText}>›</Text></View>
@@ -203,7 +203,7 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
         <View style={styles.engineCard}>
           {[
             { icon: '🧠', label: 'BlazeFace Detection', status: 'ACTIVE', color: '#00E676' },
-            { icon: '🔬', label: 'MobileFaceNet 128D', status: 'ACTIVE', color: '#00E676' },
+            { icon: '🔬', label: 'MobileFaceNet 192D', status: 'ACTIVE', color: '#00E676' },
             { icon: '👁️', label: 'Liveness Anti-Spoof', status: 'ACTIVE', color: '#00E676' },
             { icon: '🔒', label: 'AES-256 SQLCipher', status: 'SECURE', color: '#00D4FF' },
             { icon: '☁️', label: 'AWS Sync Bridge', status: isOnline ? 'ONLINE' : 'STANDBY', color: isOnline ? '#00E676' : '#FFB300' },

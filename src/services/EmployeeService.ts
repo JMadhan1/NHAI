@@ -10,63 +10,8 @@ const KEYS = {
   LEAVE_REQUESTS: 'visorai_leave_requests_v1',
 };
 
-const SEED_EMPLOYEES: Employee[] = [
-  {
-    id: 'e1', employeeId: 'EMP-001', name: 'Rajesh Kumar',
-    designation: 'Shift Supervisor', department: 'Operations',
-    shift: 'MORNING', shiftStart: '06:00', shiftEnd: '14:00',
-    joinDate: '2021-03-15', phone: '9876543210', enrolledFace: true, active: true,
-  },
-  {
-    id: 'e2', employeeId: 'EMP-002', name: 'Priya Sharma',
-    designation: 'Data Entry Operator', department: 'Administration',
-    shift: 'MORNING', shiftStart: '09:00', shiftEnd: '17:00',
-    joinDate: '2022-07-01', phone: '9876543211', enrolledFace: true, active: true,
-  },
-  {
-    id: 'e3', employeeId: 'EMP-003', name: 'Suresh Patel',
-    designation: 'Field Officer', department: 'Field Services',
-    shift: 'AFTERNOON', shiftStart: '14:00', shiftEnd: '22:00',
-    joinDate: '2020-11-20', phone: '9876543212', enrolledFace: false, active: true,
-  },
-  {
-    id: 'e4', employeeId: 'EMP-004', name: 'Anita Singh',
-    designation: 'System Analyst', department: 'IT Support',
-    shift: 'MORNING', shiftStart: '09:00', shiftEnd: '17:00',
-    joinDate: '2023-01-10', phone: '9876543213', enrolledFace: true, active: true,
-  },
-  {
-    id: 'e5', employeeId: 'EMP-005', name: 'Mohammed Ali',
-    designation: 'Network Engineer', department: 'IT Support',
-    shift: 'AFTERNOON', shiftStart: '14:00', shiftEnd: '22:00',
-    joinDate: '2021-09-05', phone: '9876543214', enrolledFace: true, active: true,
-  },
-  {
-    id: 'e6', employeeId: 'EMP-006', name: 'Kavitha Rajan',
-    designation: 'Security Officer', department: 'Security',
-    shift: 'NIGHT', shiftStart: '22:00', shiftEnd: '06:00',
-    joinDate: '2022-04-18', phone: '9876543215', enrolledFace: true, active: true,
-  },
-  {
-    id: 'e7', employeeId: 'EMP-007', name: 'Deepak Verma',
-    designation: 'Operations Executive', department: 'Operations',
-    shift: 'MORNING', shiftStart: '06:00', shiftEnd: '14:00',
-    joinDate: '2023-06-01', phone: '9876543216', enrolledFace: false, active: true,
-  },
-  {
-    id: 'e8', employeeId: 'EMP-008', name: 'Sunita Reddy',
-    designation: 'Administrative Officer', department: 'Administration',
-    shift: 'MORNING', shiftStart: '09:00', shiftEnd: '17:00',
-    joinDate: '2020-08-12', phone: '9876543217', enrolledFace: true, active: true,
-  },
-];
-
-const SEED_LEAVES: LeaveBalance[] = SEED_EMPLOYEES.map(e => ({
-  employeeId: e.employeeId,
-  annual: { total: 20, used: Math.floor(Math.random() * 8) },
-  sick: { total: 10, used: Math.floor(Math.random() * 4) },
-  casual: { total: 8, used: Math.floor(Math.random() * 3) },
-}));
+// No dummy/seed data - only real enrolled employees
+// All employees added through actual enrollment process
 
 export const HOLIDAYS_2026: Holiday[] = [
   { date: '2026-01-01', name: "New Year's Day", type: 'NATIONAL' },
@@ -83,55 +28,21 @@ export const HOLIDAYS_2026: Holiday[] = [
   { date: '2026-12-25', name: 'Christmas Day', type: 'NATIONAL' },
 ];
 
+// No seed/mock data initialization - all data is real from actual user enrollment
 async function seed() {
-  const existing = await AsyncStorage.getItem(KEYS.EMPLOYEES);
-  if (!existing) {
-    await AsyncStorage.setItem(KEYS.EMPLOYEES, JSON.stringify(SEED_EMPLOYEES));
-    await AsyncStorage.setItem(KEYS.LEAVES, JSON.stringify(SEED_LEAVES));
-    await seedAttendance();
+  // Initialize empty collections if they don't exist
+  const existingEmployees = await AsyncStorage.getItem(KEYS.EMPLOYEES);
+  if (!existingEmployees) {
+    await AsyncStorage.setItem(KEYS.EMPLOYEES, JSON.stringify([]));
   }
-}
-
-async function seedAttendance() {
-  const records: AttendanceRecord[] = [];
-  const now = new Date();
-  SEED_EMPLOYEES.forEach(emp => {
-    for (let d = 25; d >= 1; d--) {
-      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d);
-      const dow = date.getDay();
-      const dateStr = date.toISOString().split('T')[0];
-      if (dow === 0 || dow === 6) {
-        records.push({ id: `${emp.id}_${dateStr}`, employeeId: emp.employeeId, date: dateStr, status: 'HOLIDAY' });
-      } else {
-        const rand = Math.random();
-        if (rand < 0.85) {
-          const [sh, sm] = emp.shiftStart.split(':').map(Number);
-          const delay = Math.floor(Math.random() * 20);
-          const ci = `${String(sh).padStart(2, '0')}:${String(sm + delay).padStart(2, '0')}`;
-          const co = `${String(sh + 8).padStart(2, '0')}:${String(sm + delay).padStart(2, '0')}`;
-          records.push({ id: `${emp.id}_${dateStr}`, employeeId: emp.employeeId, date: dateStr, checkIn: ci, checkOut: co, status: 'PRESENT', hoursWorked: 8 });
-        } else if (rand < 0.93) {
-          records.push({ id: `${emp.id}_${dateStr}`, employeeId: emp.employeeId, date: dateStr, status: 'ABSENT' });
-        } else {
-          records.push({ id: `${emp.id}_${dateStr}`, employeeId: emp.employeeId, date: dateStr, status: 'LEAVE' });
-        }
-      }
-    }
-    const todayStr = now.toISOString().split('T')[0];
-    const dow = now.getDay();
-    if (dow !== 0 && dow !== 6) {
-      const [sh, sm] = emp.shiftStart.split(':').map(Number);
-      const nowH = now.getHours();
-      if (nowH >= sh) {
-        records.push({
-          id: `${emp.id}_${todayStr}`, employeeId: emp.employeeId, date: todayStr,
-          checkIn: `${String(sh).padStart(2, '0')}:${String(sm + 3).padStart(2, '0')}`,
-          status: 'PRESENT',
-        });
-      }
-    }
-  });
-  await AsyncStorage.setItem(KEYS.ATTENDANCE, JSON.stringify(records));
+  const existingAttendance = await AsyncStorage.getItem(KEYS.ATTENDANCE);
+  if (!existingAttendance) {
+    await AsyncStorage.setItem(KEYS.ATTENDANCE, JSON.stringify([]));
+  }
+  const existingLeaves = await AsyncStorage.getItem(KEYS.LEAVES);
+  if (!existingLeaves) {
+    await AsyncStorage.setItem(KEYS.LEAVES, JSON.stringify([]));
+  }
 }
 
 export async function getAllEmployees(): Promise<Employee[]> {

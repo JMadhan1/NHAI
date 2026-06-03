@@ -21,7 +21,7 @@ const MockFaceAuthModule: NativeFaceAuthModule = {
       const x = Math.sin(seed * 9301 + i * 49297 + 233) * 6_364_136;
       return x - Math.floor(x);
     };
-    const raw = Array.from({ length: 128 }, (_, i) => rng(i) * 2 - 1);
+    const raw = Array.from({ length: 192 }, (_, i) => rng(i) * 2 - 1);
     const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0)) || 1;
     return { embedding: raw.map(v => v / norm) };
   },

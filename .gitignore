@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+android/.gradle/
+android/app/build/
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/res/drawable-*/
+
+# Signing keys
+android/app/debug.keystore
+android/app/release.keystore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env
+.local/
+
+# Temp docs and submission artifacts
+FIX_*.md
+REBUILD_AND_TEST.md
+REGISTRATION_FORM_GUIDE.md
+SUBMISSION_READY.md
+SUBMISSION_STATUS_SUMMARY.txt
+FORM_COPY_PASTE_VALUES.txt
+PROPOSAL_SUMMARY.txt
+VisorAI_Proposal.zip
+proposal_submission/
+
+# Extra model files
+android/app/src/main/assets/face_landmark.tflite
+android/app/src/main/assets/face_landmarker_*
