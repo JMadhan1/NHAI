@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import { Provider as ReduxProvider, useDispatch } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
@@ -26,213 +28,227 @@ import { AdminScreen } from './screens/AdminScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 const Stack = createStackNavigator();
+const { width } = Dimensions.get('window');
 
-const SplashScreen: React.FC<{ status: string }> = ({ status }) => {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.85)).current;
+const INIT_STEPS = [
+  'Decrypting secure database…',
+  'Loading BlazeFace model…',
+  'Loading MobileFaceNet…',
+  'Starting network monitor…',
+  'Verifying sync queue…',
+  'System ready.',
+];
+
+const SplashScreen: React.FC<{ step: number }> = ({ step }) => {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(1)).current;
+  const barWidth = useRef(new Animated.Value(0)).current;
+  const statusFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, tension: 80, useNativeDriver: true }),
+      Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+      Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringScale, { toValue: 1.4, duration: 1200, useNativeDriver: true }),
+        Animated.timing(ringScale, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(barWidth, {
+      toValue: ((step + 1) / INIT_STEPS.length) * (width - 80),
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+
+    Animated.sequence([
+      Animated.timing(statusFade, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(statusFade, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [step]);
 
   return (
-    <View style={splashStyles.container}>
-      <Animated.View style={[splashStyles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={splashStyles.logoRing}>
-          <Text style={splashStyles.logoIcon}>🔐</Text>
+    <View style={sp.root}>
+      <StatusBar barStyle="light-content" backgroundColor="#050B18" />
+
+      <Animated.View style={[sp.content, { opacity: fadeIn }]}>
+
+        <View style={sp.logoWrap}>
+          <Animated.View style={[sp.ring, { transform: [{ scale: ringScale }], opacity: 0.25 }]} />
+          <Animated.View style={[sp.logoCircle, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+            <Text style={sp.logoLetter}>V</Text>
+          </Animated.View>
         </View>
-        <Text style={splashStyles.appName}>TollGuard</Text>
-        <Text style={splashStyles.appSubtitle}>AI  ·  Face Auth  ·  Offline</Text>
 
-        <View style={splashStyles.divider} />
+        <Text style={sp.appName}>VisorAI</Text>
+        <Text style={sp.appTagline}>VISION · IDENTITY · SECURITY</Text>
 
-        <ActivityIndicator color="#007AFF" size="small" style={{ marginBottom: 10 }} />
-        <Text style={splashStyles.statusText}>{status}</Text>
+        <View style={sp.divider} />
 
-        <View style={splashStyles.badgeRow}>
-          <View style={splashStyles.badge}>
-            <Text style={splashStyles.badgeText}>AES-256</Text>
-          </View>
-          <View style={splashStyles.badge}>
-            <Text style={splashStyles.badgeText}>TFLite</Text>
-          </View>
-          <View style={splashStyles.badge}>
-            <Text style={splashStyles.badgeText}>100% Offline</Text>
+        <View style={sp.chips}>
+          {['TFLite', 'AES-256', 'SQLCipher', '100% Offline'].map(c => (
+            <View key={c} style={sp.chip}>
+              <Text style={sp.chipText}>{c}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={sp.progressSection}>
+          <Animated.Text style={[sp.statusText, { opacity: statusFade }]}>
+            {INIT_STEPS[Math.min(step, INIT_STEPS.length - 1)]}
+          </Animated.Text>
+          <View style={sp.progressTrack}>
+            <Animated.View style={[sp.progressBar, { width: barWidth }]} />
           </View>
         </View>
+
       </Animated.View>
 
-      <Text style={splashStyles.footerText}>HACKATHON 7.0  ·  TollGuardAI</Text>
+      <Text style={sp.footerText}>HACKATHON 7.0  ·  VISORAI TEAM</Text>
     </View>
   );
 };
 
 const AppContent: React.FC = () => {
-  const [initialized, setInitializedState] = useState(false);
-  const [initStatus, setInitStatus] = useState('Initializing database…');
+  const [ready, setReady] = useState(false);
+  const [initStep, setInitStep] = useState(0);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const initialize = async () => {
+    const init = async () => {
       try {
-        setInitStatus('Decrypting local database…');
-        await initDatabase();
-
-        setInitStatus('Loading face recognition models…');
-        await initializeFaceAuth();
-
-        setInitStatus('Starting network monitor…');
+        setInitStep(0); await initDatabase();
+        setInitStep(1); await new Promise(r => setTimeout(r, 300));
+        setInitStep(2); await initializeFaceAuth();
+        setInitStep(3);
         initNetworkMonitor();
-        startNetworkWatcher(isOnline => {
-          dispatch(setOnline(isOnline));
-        });
-        subscribeToNetworkStatus(status => {
-          dispatch(setOnline(status.isOnline));
-        });
-
-        setInitStatus('Checking sync queue…');
-        const syncStatus = await getSyncStatus();
-        dispatch(setPendingCount(syncStatus.pendingCount));
+        startNetworkWatcher(online => dispatch(setOnline(online)));
+        subscribeToNetworkStatus(s => dispatch(setOnline(s.isOnline)));
+        setInitStep(4);
+        const sync = await getSyncStatus();
+        dispatch(setPendingCount(sync.pendingCount));
         dispatch(setInitialized(true));
-
-        setInitStatus('Ready');
-        setInitializedState(true);
+        setInitStep(5);
+        await new Promise(r => setTimeout(r, 600));
+        setReady(true);
       } catch (err: any) {
-        console.error('Initialization error:', err);
-        Alert.alert(
-          'Initialization Failed',
-          'Failed to start FaceAuth: ' + (err.message || 'Unknown error'),
-          [{ text: 'Retry', onPress: () => initialize() }]
-        );
+        Alert.alert('Boot Error', err?.message ?? 'Failed to start VisorAI', [
+          { text: 'Retry', onPress: () => init() },
+        ]);
       }
     };
-    initialize();
+    init();
   }, [dispatch]);
 
-  if (!initialized) {
-    return <SplashScreen status={initStatus} />;
-  }
+  if (!ready) return <SplashScreen step={initStep} />;
 
   return (
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          cardStyle: { backgroundColor: '#0a0e27' },
-          animationEnabled: true,
+          cardStyle: { backgroundColor: '#050B18' },
           cardStyleInterpolator: ({ current, layouts }) => ({
             cardStyle: {
-              transform: [
-                {
-                  translateX: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [layouts.screen.width, 0],
-                  }),
-                },
-              ],
+              transform: [{
+                translateX: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [layouts.screen.width, 0],
+                }),
+              }],
+              opacity: current.progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] }),
             },
           }),
         }}
       >
         <Stack.Screen name="Home">
-          {props => <HomeScreen {...props} onNavigate={screen => props.navigation.navigate(screen)} />}
+          {p => <HomeScreen {...p} onNavigate={s => p.navigation.navigate(s)} />}
         </Stack.Screen>
         <Stack.Screen name="Auth">
-          {props => <AuthScreen {...props} onBack={() => props.navigation.goBack()} />}
+          {p => <AuthScreen {...p} onBack={() => p.navigation.goBack()} />}
         </Stack.Screen>
         <Stack.Screen name="Enroll">
-          {props => <EnrollScreen {...props} onBack={() => props.navigation.goBack()} />}
+          {p => <EnrollScreen {...p} onBack={() => p.navigation.goBack()} />}
         </Stack.Screen>
         <Stack.Screen name="History">
-          {props => <HistoryScreen {...props} onBack={() => props.navigation.goBack()} />}
+          {p => <HistoryScreen {...p} onBack={() => p.navigation.goBack()} />}
         </Stack.Screen>
         <Stack.Screen name="Admin">
-          {props => <AdminScreen {...props} onBack={() => props.navigation.goBack()} />}
+          {p => <AdminScreen {...p} onBack={() => p.navigation.goBack()} />}
         </Stack.Screen>
         <Stack.Screen name="Settings">
-          {props => <SettingsScreen {...props} onBack={() => props.navigation.goBack()} />}
+          {p => <SettingsScreen {...p} onBack={() => p.navigation.goBack()} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ReduxProvider store={store}>
-        <AppContent />
-      </ReduxProvider>
-    </GestureHandlerRootView>
-  );
-};
+const App: React.FC = () => (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <ReduxProvider store={store}>
+      <AppContent />
+    </ReduxProvider>
+  </GestureHandlerRootView>
+);
 
-const splashStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#050914',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
+const sp = StyleSheet.create({
+  root: {
+    flex: 1, backgroundColor: '#050B18',
+    justifyContent: 'center', alignItems: 'center',
   },
-  content: { alignItems: 'center', width: '100%' },
-  logoRing: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(0,122,255,0.15)',
-    borderWidth: 2,
-    borderColor: 'rgba(0,122,255,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
+  content: { alignItems: 'center', width: '100%', paddingHorizontal: 40 },
+
+  logoWrap: { width: 120, height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
+  ring: {
+    position: 'absolute', width: 120, height: 120, borderRadius: 60,
+    borderWidth: 2, borderColor: '#00D4FF',
   },
-  logoIcon: { fontSize: 44 },
-  appName: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 1,
-    marginBottom: 6,
+  logoCircle: {
+    width: 80, height: 80, borderRadius: 24,
+    backgroundColor: 'rgba(0,212,255,0.12)',
+    borderWidth: 2, borderColor: 'rgba(0,212,255,0.4)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  appSubtitle: {
-    fontSize: 13,
-    color: '#718096',
-    letterSpacing: 2,
-    fontWeight: '600',
-    marginBottom: 32,
+  logoLetter: { fontSize: 38, fontWeight: '900', color: '#00D4FF' },
+
+  appName: { fontSize: 40, fontWeight: '900', color: '#fff', letterSpacing: 2, marginBottom: 6 },
+  appTagline: { fontSize: 10, color: '#4A5568', fontWeight: '700', letterSpacing: 3, marginBottom: 28 },
+
+  divider: { width: 40, height: 2, backgroundColor: 'rgba(0,212,255,0.3)', borderRadius: 1, marginBottom: 24 },
+
+  chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 40 },
+  chip: {
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  divider: {
-    width: 60,
-    height: 2,
-    backgroundColor: 'rgba(0,122,255,0.4)',
-    borderRadius: 1,
-    marginBottom: 28,
+  chipText: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
+
+  progressSection: { width: '100%', alignItems: 'center', gap: 12 },
+  statusText: { fontSize: 13, color: 'rgba(255,255,255,0.4)', height: 20 },
+  progressTrack: {
+    width: width - 80, height: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2,
   },
-  statusText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
-    marginBottom: 28,
+  progressBar: {
+    height: 3, borderRadius: 2,
+    backgroundColor: '#00D4FF',
+    shadowColor: '#00D4FF', shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8, shadowRadius: 6,
   },
-  badgeRow: { flexDirection: 'row', gap: 8 },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  badgeText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
+
   footerText: {
-    position: 'absolute',
-    bottom: 40,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.2)',
-    letterSpacing: 1.5,
+    position: 'absolute', bottom: 40,
+    fontSize: 10, color: '#1E2840', fontWeight: '600', letterSpacing: 2,
   },
 });
 

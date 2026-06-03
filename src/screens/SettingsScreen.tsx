@@ -241,13 +241,13 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
           <Text style={styles.sectionTitle}>About</Text>
 
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>App Version</Text>
-            <Text style={styles.rowValue}>1.0.0</Text>
+            <Text style={styles.rowLabel}>App Name</Text>
+            <Text style={styles.rowValue}>VisorAI</Text>
           </View>
           <View style={styles.rowSeparator} />
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Build Date</Text>
-            <Text style={styles.rowValue}>June 2026</Text>
+            <Text style={styles.rowLabel}>Version</Text>
+            <Text style={styles.rowValue}>1.0.0  ·  Hackathon 7.0</Text>
           </View>
           <View style={styles.rowSeparator} />
           <View style={styles.row}>
@@ -263,6 +263,11 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Framework</Text>
             <Text style={styles.rowValue}>React Native 0.73.6</Text>
+          </View>
+          <View style={styles.rowSeparator} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Tagline</Text>
+            <Text style={styles.rowValue}>Vision · Identity · Security</Text>
           </View>
         </View>
 
