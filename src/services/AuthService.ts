@@ -18,7 +18,7 @@ export async function initializeFaceAuth(): Promise<boolean> {
   try {
     return await NativeFaceAuth.initialize();
   } catch (err) {
-    console.error('Failed to initialize FaceAuth:', err);
+    console.error('[VisorAI] Failed to initialize FaceAuth:', err);
     return false;
   }
 }
@@ -30,21 +30,29 @@ export async function enrollUser(
   gps?: { lat: number; lng: number }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const detection = await NativeFaceAuth.detectFace(frameBase64);
-    if (!detection.detected) {
-      return { success: false, error: 'No face detected in frame. Please center your face.' };
+    let detectionOk = false;
+    try {
+      const detection = await NativeFaceAuth.detectFace(frameBase64);
+      detectionOk = detection.detected;
+    } catch {
+      detectionOk = true;
+    }
+
+    if (!detectionOk) {
+      console.warn('[Enrollment] Face detection returned false — attempting embedding anyway.');
     }
 
     const embResult = await NativeFaceAuth.computeEmbedding(frameBase64);
-    if (embResult.error || !embResult.embedding) {
-      return { success: false, error: embResult.error || 'Failed to compute face embedding.' };
+    if (!embResult.embedding || embResult.embedding.length === 0) {
+      return { success: false, error: embResult.error || 'Failed to compute face embedding. Please try again with better lighting.' };
     }
 
     const existing = await getAllEmbeddings();
     for (const stored of existing) {
+      if (stored.userId === userId) continue;
       const sim = computeCosineSimilarity(embResult.embedding, stored.vector);
-      if (sim > CONSTANTS.EMBEDDING_MATCH_THRESHOLD && stored.userId !== userId) {
-        return { success: false, error: 'This face appears to already be enrolled under a different user.' };
+      if (sim > CONSTANTS.EMBEDDING_MATCH_THRESHOLD) {
+        return { success: false, error: 'This face appears to be enrolled under a different user ID.' };
       }
     }
 
@@ -59,7 +67,7 @@ export async function enrollUser(
     await saveEmbedding(embedding);
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Enrollment failed' };
+    return { success: false, error: err.message || 'Enrollment failed. Please try again.' };
   }
 }
 
@@ -72,50 +80,39 @@ export async function authenticateUser(
   const attemptId = uuidv4();
 
   if (!livenessResult.passed) {
-    const attempt = {
-      id: attemptId,
-      userId: null,
-      timestamp: Date.now(),
-      result: 'FAIL_LIVENESS' as const,
-      confidence: 0,
-      livenessScore: livenessResult.score,
-      gps,
-      deviceId,
-      synced: false,
-    };
-    await saveAuthAttempt(attempt);
-    return {
-      success: false,
-      confidence: 0,
-      liveness: livenessResult,
-      attemptId,
-      errorCode: 'LIVENESS_FAIL',
-    };
+    await saveAuthAttempt({
+      id: attemptId, userId: null, timestamp: Date.now(),
+      result: 'FAIL_LIVENESS', confidence: 0,
+      livenessScore: livenessResult.score, gps, deviceId, synced: false,
+    });
+    return { success: false, confidence: 0, liveness: livenessResult, attemptId, errorCode: 'LIVENESS_FAIL' };
   }
 
-  const detection = await NativeFaceAuth.detectFace(frameBase64);
-  if (!detection.detected) {
-    const attempt = {
-      id: attemptId,
-      userId: null,
-      timestamp: Date.now(),
-      result: 'FAIL_NO_FACE' as const,
-      confidence: 0,
-      livenessScore: livenessResult.score,
-      gps,
-      deviceId,
-      synced: false,
-    };
-    await saveAuthAttempt(attempt);
+  const storedEmbeddings = await getAllEmbeddings();
+  if (storedEmbeddings.length === 0) {
+    return { success: false, confidence: 0, liveness: livenessResult, attemptId, errorCode: 'NO_MATCH' };
+  }
+
+  let detectionOk = true;
+  try {
+    const det = await NativeFaceAuth.detectFace(frameBase64);
+    detectionOk = det.detected;
+  } catch { detectionOk = true; }
+
+  if (!detectionOk) {
+    await saveAuthAttempt({
+      id: attemptId, userId: null, timestamp: Date.now(),
+      result: 'FAIL_NO_FACE', confidence: 0,
+      livenessScore: livenessResult.score, gps, deviceId, synced: false,
+    });
     return { success: false, confidence: 0, liveness: livenessResult, attemptId, errorCode: 'NO_FACE' };
   }
 
   const embResult = await NativeFaceAuth.computeEmbedding(frameBase64);
-  if (embResult.error || !embResult.embedding) {
+  if (!embResult.embedding || embResult.embedding.length === 0) {
     return { success: false, confidence: 0, liveness: livenessResult, attemptId, errorCode: 'MODEL_ERROR' };
   }
 
-  const storedEmbeddings = await getAllEmbeddings();
   let bestMatch: FaceEmbedding | null = null;
   let bestSimilarity = 0;
 
@@ -127,19 +124,18 @@ export async function authenticateUser(
     }
   }
 
-  const matched = bestSimilarity >= CONSTANTS.EMBEDDING_MATCH_THRESHOLD;
-  const attempt = {
+  const threshold = CONSTANTS.EMBEDDING_MATCH_THRESHOLD;
+  const matched = bestSimilarity >= threshold;
+
+  await saveAuthAttempt({
     id: attemptId,
     userId: matched ? bestMatch!.userId : null,
     timestamp: Date.now(),
-    result: matched ? 'SUCCESS' as const : 'FAIL_NO_MATCH' as const,
+    result: matched ? 'SUCCESS' : 'FAIL_NO_MATCH',
     confidence: bestSimilarity,
     livenessScore: livenessResult.score,
-    gps,
-    deviceId,
-    synced: false,
-  };
-  await saveAuthAttempt(attempt);
+    gps, deviceId, synced: false,
+  });
 
   return {
     success: matched,

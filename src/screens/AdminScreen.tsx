@@ -1,23 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  FlatList,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
+  Alert, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  getAllEmbeddings,
-  deleteEmbedding,
-  purgeLocalSyncedAttempts,
-  getUserCount,
-  getPendingCount,
-  clearAuthHistory,
+  getAllEmbeddings, deleteEmbedding, purgeLocalSyncedAttempts,
+  getUserCount, getPendingCount, clearAuthHistory,
 } from '../services/StorageService';
 import { manualSync } from '../services/SyncService';
 import { setSyncing, setSyncComplete, setPendingCount } from '../store/syncSlice';
@@ -27,9 +16,10 @@ import type { RootState } from '../store/store';
 
 interface Props {
   onBack: () => void;
+  onNavigate?: (screen: string) => void;
 }
 
-export const AdminScreen: React.FC<Props> = ({ onBack }) => {
+export const AdminScreen: React.FC<Props> = ({ onBack, onNavigate }) => {
   const [embeddings, setEmbeddings] = useState<FaceEmbedding[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCountState] = useState(0);
@@ -40,57 +30,40 @@ export const AdminScreen: React.FC<Props> = ({ onBack }) => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [data, pending] = await Promise.all([
-        getAllEmbeddings(),
-        getPendingCount(),
-      ]);
+      const [data, pending] = await Promise.all([getAllEmbeddings(), getPendingCount()]);
       setEmbeddings(data);
       setPendingCountState(pending);
       dispatch(setPendingCount(pending));
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to load admin data');
     } finally {
       setLoading(false);
     }
   }, [dispatch]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleDeleteUser = useCallback((userId: string, userName: string) => {
     Alert.alert('Delete User', `Remove ${userName} from the enrolled database?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: 'Delete', style: 'destructive',
         onPress: async () => {
-          try {
-            await deleteEmbedding(userId);
-            setEmbeddings(prev => prev.filter(e => e.userId !== userId));
-          } catch (err) {
-            Alert.alert('Error', 'Failed to delete user');
-          }
+          await deleteEmbedding(userId);
+          setEmbeddings(prev => prev.filter(e => e.userId !== userId));
         },
       },
     ]);
   }, []);
 
   const handleManualSync = useCallback(async () => {
-    if (!isOnline) {
-      Alert.alert('No Connection', 'Device is offline. Connect to network and try again.');
-      return;
-    }
+    if (!isOnline) { Alert.alert('No Connection', 'Device is offline. Connect and try again.'); return; }
     dispatch(setSyncing(true));
     setSyncResult(null);
     try {
       const result = await manualSync();
       dispatch(setSyncComplete({ at: Date.now(), error: result.errors[0] }));
-      if (result.errors.length > 0) {
-        setSyncResult(`⚠️ Sync error: ${result.errors[0]}`);
-      } else {
-        setSyncResult(`✅ Uploaded ${result.uploaded} record(s), purged ${result.purged}`);
-      }
+      setSyncResult(result.errors.length > 0 ? `⚠️ ${result.errors[0]}` : `✅ Uploaded ${result.uploaded} record(s)`);
       await loadData();
     } catch (err: any) {
       dispatch(setSyncComplete({ at: Date.now(), error: err.message }));
@@ -99,307 +72,227 @@ export const AdminScreen: React.FC<Props> = ({ onBack }) => {
   }, [isOnline, dispatch, loadData]);
 
   const handlePurgeSynced = useCallback(() => {
-    Alert.alert(
-      'Purge Synced Records',
-      'This will permanently delete all locally stored auth attempts that have already been synced to AWS. Unsynced records will NOT be deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Purge',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const purged = await purgeLocalSyncedAttempts();
-              Alert.alert('Purged', `${purged} synced record(s) deleted from local storage.`);
-              await loadData();
-            } catch (err) {
-              Alert.alert('Error', 'Failed to purge synced data');
-            }
-          },
+    Alert.alert('Purge Synced Records', 'Delete all locally stored records that have been synced to AWS?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Purge', style: 'destructive',
+        onPress: async () => {
+          const purged = await purgeLocalSyncedAttempts();
+          Alert.alert('Purged', `${purged} synced record(s) removed from local storage.`);
+          await loadData();
         },
-      ]
-    );
+      },
+    ]);
   }, [loadData]);
 
   const handleClearHistory = useCallback(() => {
-    Alert.alert(
-      'Clear Auth History',
-      'This will permanently delete ALL authentication attempt logs (synced and unsynced). This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearAuthHistory();
-              setPendingCountState(0);
-              dispatch(setPendingCount(0));
-              setSyncResult('✅ Auth history cleared');
-            } catch (err) {
-              Alert.alert('Error', 'Failed to clear history');
-            }
-          },
+    Alert.alert('Clear Auth History', 'Permanently delete ALL authentication attempt logs?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear All', style: 'destructive',
+        onPress: async () => {
+          await clearAuthHistory();
+          setPendingCountState(0);
+          dispatch(setPendingCount(0));
+          setSyncResult('✅ Auth history cleared');
         },
-      ]
-    );
+      },
+    ]);
   }, [dispatch]);
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
-  };
+  const formatDate = (ts: number) =>
+    new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.root}>
       <OfflineBanner />
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack}>
-          <Text style={styles.backBtn}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Admin Panel</Text>
-        <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#4CAF50' : '#ff9500' }]} />
+      <View style={s.header}>
+        <TouchableOpacity onPress={onBack}><Text style={s.backBtn}>← Back</Text></TouchableOpacity>
+        <Text style={s.title}>Admin Panel</Text>
+        <View style={[s.dot, { backgroundColor: isOnline ? '#00E676' : '#FFB300' }]} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{embeddings.length}</Text>
-            <Text style={styles.statLabel}>Enrolled</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, pendingCount > 0 && { color: '#ff9500' }]}>
-              {pendingCount}
-            </Text>
-            <Text style={styles.statLabel}>Pending Sync</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: isOnline ? '#4CAF50' : '#ff9500' }]}>
-              {isOnline ? 'Online' : 'Offline'}
-            </Text>
-            <Text style={styles.statLabel}>Network</Text>
-          </View>
+        {/* Summary */}
+        <View style={s.statsRow}>
+          {[
+            { label: 'Enrolled', value: `${embeddings.length}`, color: '#00D4FF' },
+            { label: 'Pending Sync', value: `${pendingCount}`, color: pendingCount > 0 ? '#FFB300' : '#fff' },
+            { label: 'Network', value: isOnline ? 'Online' : 'Offline', color: isOnline ? '#00E676' : '#FFB300' },
+          ].map(item => (
+            <View key={item.label} style={s.statCard}>
+              <Text style={[s.statVal, { color: item.color }]}>{item.value}</Text>
+              <Text style={s.statLbl}>{item.label}</Text>
+            </View>
+          ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SYNC & DATA</Text>
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>EMPLOYEE MANAGEMENT</Text>
+          <TouchableOpacity style={[s.actionBtn, s.empBtn]} onPress={() => onNavigate?.('EmployeeManagement')}>
+            <Text style={s.actionIcon}>👥</Text>
+            <View style={s.actionText}>
+              <Text style={s.actionTitle}>All Employees</Text>
+              <Text style={s.actionDesc}>View staff list, shifts, attendance schedule</Text>
+            </View>
+            <Text style={s.chevron}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.actionBtn, s.dashBtn]} onPress={() => onNavigate?.('EmployeeDashboard')}>
+            <Text style={s.actionIcon}>📊</Text>
+            <View style={s.actionText}>
+              <Text style={s.actionTitle}>Employee Dashboard</Text>
+              <Text style={s.actionDesc}>Leave balance, check-in/out, holidays</Text>
+            </View>
+            <Text style={s.chevron}>›</Text>
+          </TouchableOpacity>
+        </View>
 
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>SYNC & DATA</Text>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.syncBtn, (!isOnline || isSyncing) && styles.actionBtnDisabled]}
+            style={[s.actionBtn, s.syncBtn, (!isOnline || isSyncing) && s.disabled]}
             onPress={handleManualSync}
             disabled={!isOnline || isSyncing}
           >
-            {isSyncing ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.actionBtnIcon}>☁️</Text>
-            )}
-            <View style={styles.actionBtnTextGroup}>
-              <Text style={styles.actionBtnTitle}>
-                {isSyncing ? 'Syncing…' : 'Sync to AWS Now'}
-              </Text>
-              <Text style={styles.actionBtnDesc}>
-                {isOnline ? `${pendingCount} record(s) pending upload` : 'No network connection'}
-              </Text>
+            {isSyncing ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.actionIcon}>☁️</Text>}
+            <View style={s.actionText}>
+              <Text style={s.actionTitle}>{isSyncing ? 'Syncing…' : 'Sync to AWS Now'}</Text>
+              <Text style={s.actionDesc}>{isOnline ? `${pendingCount} record(s) pending` : 'No connection'}</Text>
             </View>
           </TouchableOpacity>
 
           {syncResult && (
-            <View style={styles.syncResultBox}>
-              <Text style={styles.syncResultText}>{syncResult}</Text>
+            <View style={s.resultBox}>
+              <Text style={s.resultText}>{syncResult}</Text>
             </View>
           )}
 
-          <TouchableOpacity style={[styles.actionBtn, styles.purgeBtn]} onPress={handlePurgeSynced}>
-            <Text style={styles.actionBtnIcon}>🗑️</Text>
-            <View style={styles.actionBtnTextGroup}>
-              <Text style={styles.actionBtnTitle}>Purge Synced Records</Text>
-              <Text style={styles.actionBtnDesc}>Remove locally cached records that are already on AWS</Text>
+          <TouchableOpacity style={[s.actionBtn, s.purgeBtn]} onPress={handlePurgeSynced}>
+            <Text style={s.actionIcon}>🗑️</Text>
+            <View style={s.actionText}>
+              <Text style={s.actionTitle}>Purge Synced Records</Text>
+              <Text style={s.actionDesc}>Remove locally cached records already on AWS</Text>
             </View>
           </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.actionBtn, styles.dangerBtn]} onPress={handleClearHistory}>
-            <Text style={styles.actionBtnIcon}>⚠️</Text>
-            <View style={styles.actionBtnTextGroup}>
-              <Text style={styles.actionBtnTitle}>Clear Auth History</Text>
-              <Text style={styles.actionBtnDesc}>Delete all authentication attempt logs</Text>
+          <TouchableOpacity style={[s.actionBtn, s.dangerBtn]} onPress={handleClearHistory}>
+            <Text style={s.actionIcon}>⚠️</Text>
+            <View style={s.actionText}>
+              <Text style={s.actionTitle}>Clear Auth History</Text>
+              <Text style={s.actionDesc}>Delete all authentication attempt logs</Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ENROLLED USERS ({embeddings.length})</Text>
-
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>FACE DATABASE ({embeddings.length})</Text>
           {loading ? (
-            <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 24 }} />
+            <ActivityIndicator size="large" color="#00D4FF" style={{ marginVertical: 24 }} />
           ) : embeddings.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>👤  No enrolled users yet</Text>
-              <Text style={styles.emptySubText}>Enroll users from the home screen</Text>
+            <View style={s.empty}>
+              <Text style={s.emptyIcon}>👤</Text>
+              <Text style={s.emptyText}>No enrolled users</Text>
             </View>
           ) : (
-            embeddings.map((item) => (
-              <View key={item.id} style={styles.userCard}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>
-                    {item.userName.charAt(0).toUpperCase()}
-                  </Text>
+            embeddings.map(item => (
+              <View key={item.id} style={s.userCard}>
+                <View style={s.userAvatar}>
+                  <Text style={s.userAvatarText}>{item.userName.charAt(0).toUpperCase()}</Text>
                 </View>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{item.userName}</Text>
-                  <Text style={styles.userId}>ID: {item.userId}</Text>
-                  <Text style={styles.enrollDate}>Enrolled {formatDate(item.enrolledAt)}</Text>
-                  <Text style={styles.vectorInfo}>{item.vector.length}D embedding · AES-256</Text>
+                <View style={s.userInfo}>
+                  <Text style={s.userName}>{item.userName}</Text>
+                  <Text style={s.userId}>{item.userId}</Text>
+                  <Text style={s.userMeta}>Enrolled {formatDate(item.enrolledAt)}  ·  128D embedding</Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.deleteBtn}
+                  style={s.delBtn}
                   onPress={() => handleDeleteUser(item.userId, item.userName)}
                 >
-                  <Text style={styles.deleteBtnText}>Delete</Text>
+                  <Text style={s.delBtnText}>Remove</Text>
                 </TouchableOpacity>
               </View>
             ))
           )}
         </View>
 
-        <View style={styles.footerInfo}>
-          <Text style={styles.footerInfoText}>
-            🔒  All facial data is encrypted with AES-256 via SQLCipher and hardware-backed keystore. No data leaves the device without explicit sync.
+        <View style={s.footerNote}>
+          <Text style={s.footerNoteText}>
+            🔒 All facial data is AES-256 encrypted via SQLCipher with hardware-backed keystore. Data never leaves the device without explicit sync.
           </Text>
+          <Text style={s.footerCredit}>VisorAI · Built by J Madhan</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0e27' },
+const CARD = 'rgba(13,21,48,0.95)';
+const BORDER = 'rgba(255,255,255,0.07)';
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#050B18' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: BORDER,
   },
-  backBtn: { color: '#007AFF', fontSize: 16, fontWeight: '600' },
+  backBtn: { color: '#00D4FF', fontSize: 16, fontWeight: '600' },
   title: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  onlineDot: { width: 10, height: 10, borderRadius: 5 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
 
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
+  statsRow: { flexDirection: 'row', gap: 10, padding: 16 },
   statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(21,26,58,0.8)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    flex: 1, backgroundColor: CARD, borderRadius: 12, padding: 12,
+    alignItems: 'center', borderWidth: 1, borderColor: BORDER,
   },
-  statValue: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  statLabel: { fontSize: 10, color: '#718096', fontWeight: '600' },
+  statVal: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  statLbl: { fontSize: 9, color: '#718096', fontWeight: '600' },
 
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#718096',
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 4,
-  },
+  section: { paddingHorizontal: 16, marginBottom: 8 },
+  sectionTitle: { fontSize: 10, fontWeight: '700', color: '#4A5568', letterSpacing: 1.2, marginBottom: 10, marginTop: 4 },
 
   actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    gap: 12,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 14,
+    padding: 14, marginBottom: 10, gap: 12, borderWidth: 1,
   },
-  syncBtn: {
-    backgroundColor: 'rgba(0,122,255,0.12)',
-    borderColor: 'rgba(0,122,255,0.3)',
-  },
-  purgeBtn: {
-    backgroundColor: 'rgba(255,149,0,0.1)',
-    borderColor: 'rgba(255,149,0,0.25)',
-  },
-  dangerBtn: {
-    backgroundColor: 'rgba(244,67,54,0.08)',
-    borderColor: 'rgba(244,67,54,0.2)',
-  },
-  actionBtnDisabled: { opacity: 0.5 },
-  actionBtnIcon: { fontSize: 22 },
-  actionBtnTextGroup: { flex: 1 },
-  actionBtnTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
-  actionBtnDesc: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
+  empBtn: { backgroundColor: 'rgba(0,230,118,0.07)', borderColor: 'rgba(0,230,118,0.2)' },
+  dashBtn: { backgroundColor: 'rgba(0,212,255,0.07)', borderColor: 'rgba(0,212,255,0.2)' },
+  syncBtn: { backgroundColor: 'rgba(0,98,255,0.1)', borderColor: 'rgba(0,98,255,0.25)' },
+  purgeBtn: { backgroundColor: 'rgba(255,179,0,0.07)', borderColor: 'rgba(255,179,0,0.2)' },
+  dangerBtn: { backgroundColor: 'rgba(255,61,113,0.06)', borderColor: 'rgba(255,61,113,0.18)' },
+  disabled: { opacity: 0.45 },
+  actionIcon: { fontSize: 22, width: 28, textAlign: 'center' },
+  actionText: { flex: 1 },
+  actionTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
+  actionDesc: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
+  chevron: { fontSize: 22, color: '#4A5568' },
 
-  syncResultBox: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-  },
-  syncResultText: { fontSize: 13, color: '#fff', textAlign: 'center' },
+  resultBox: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: 10, marginBottom: 10 },
+  resultText: { fontSize: 13, color: '#fff', textAlign: 'center' },
 
-  emptyContainer: { alignItems: 'center', paddingVertical: 32, gap: 8 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '600' },
-  emptySubText: { color: 'rgba(255,255,255,0.3)', fontSize: 13 },
+  empty: { alignItems: 'center', paddingVertical: 28, gap: 8 },
+  emptyIcon: { fontSize: 36 },
+  emptyText: { color: '#4A5568', fontSize: 14 },
 
   userCard: {
-    backgroundColor: 'rgba(21,26,58,0.8)',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: CARD, borderRadius: 14, padding: 14, marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: BORDER,
   },
   userAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#0062FF',
+    justifyContent: 'center', alignItems: 'center',
   },
   userAvatarText: { fontSize: 18, fontWeight: '800', color: '#fff' },
   userInfo: { flex: 1 },
   userName: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
-  userId: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 2 },
-  enrollDate: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 2 },
-  vectorInfo: { fontSize: 10, color: 'rgba(255,255,255,0.25)' },
-  deleteBtn: {
-    backgroundColor: 'rgba(244,67,54,0.15)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(244,67,54,0.3)',
+  userId: { fontSize: 12, color: '#4A5568', marginBottom: 2 },
+  userMeta: { fontSize: 10, color: '#2D3748' },
+  delBtn: {
+    backgroundColor: 'rgba(255,61,113,0.12)', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,61,113,0.25)',
   },
-  deleteBtnText: { color: '#f44336', fontSize: 12, fontWeight: '700' },
+  delBtnText: { color: '#FF3D71', fontSize: 12, fontWeight: '700' },
 
-  footerInfo: {
-    margin: 16,
-    padding: 14,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 12,
-    marginBottom: 32,
-  },
-  footerInfoText: { fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 18 },
+  footerNote: { margin: 16, padding: 14, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, marginBottom: 32, gap: 6 },
+  footerNoteText: { fontSize: 12, color: '#2D3748', lineHeight: 18 },
+  footerCredit: { fontSize: 11, color: '#4A5568', fontWeight: '600', textAlign: 'center', marginTop: 4 },
 });
