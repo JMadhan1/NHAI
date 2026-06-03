@@ -3,55 +3,34 @@ export interface ImageDimensions {
   height: number;
 }
 
-export function resizeImage(
-  base64: string,
-  targetWidth: number,
-  targetHeight: number
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Canvas context not available'));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-        resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
-      };
-      img.onerror = () => reject(new Error('Image load failed'));
-      img.src = `data:image/jpeg;base64,${base64}`;
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-export function getImageDimensions(base64: string): Promise<ImageDimensions> {
-  return new Promise((resolve, reject) => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      img.onerror = () => reject(new Error('Image load failed'));
-      img.src = `data:image/jpeg;base64,${base64}`;
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
 export function normalizeBase64(input: string): string {
   return input.replace(/^data:image\/[a-z]+;base64,/, '');
 }
 
 export function isValidBase64Image(input: string): boolean {
+  if (!input || input.length < 100) return false;
   const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
   const cleaned = normalizeBase64(input);
-  return base64Regex.test(cleaned) && cleaned.length > 100;
+  return base64Regex.test(cleaned);
+}
+
+export function base64ToBytes(base64: string): Uint8Array {
+  const cleaned = normalizeBase64(base64);
+  const binary = atob(cleaned);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function estimateBase64Size(base64: string): number {
+  const cleaned = normalizeBase64(base64);
+  return Math.floor((cleaned.length * 3) / 4);
 }

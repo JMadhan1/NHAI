@@ -11,7 +11,9 @@ let db: SQLite.SQLiteDatabase | null = null;
 async function getOrCreateEncryptionKey(): Promise<string> {
   const existing = await Keychain.getGenericPassword({ service: CONSTANTS.KEYCHAIN_SERVICE });
   if (existing && existing.password) return existing.password;
-  const key = Array.from({ length: 32 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+  const key = Array.from({ length: 32 }, () =>
+    Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+  ).join('');
   await Keychain.setGenericPassword('faceauth', key, {
     service: CONSTANTS.KEYCHAIN_SERVICE,
     accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -64,6 +66,7 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_auth_synced ON auth_attempts(synced);`);
+  await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_auth_timestamp ON auth_attempts(timestamp);`);
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_queue_created ON sync_queue(created_at);`);
 }
 
@@ -85,7 +88,7 @@ export async function saveEmbedding(embedding: FaceEmbedding): Promise<void> {
 
 export async function getAllEmbeddings(): Promise<FaceEmbedding[]> {
   if (!db) throw new Error('Database not initialized');
-  const [result] = await db.executeSql('SELECT * FROM face_embeddings');
+  const [result] = await db.executeSql('SELECT * FROM face_embeddings ORDER BY enrolled_at DESC');
   const embeddings: FaceEmbedding[] = [];
   for (let i = 0; i < result.rows.length; i++) {
     const row = result.rows.item(i);
@@ -99,6 +102,12 @@ export async function getAllEmbeddings(): Promise<FaceEmbedding[]> {
     });
   }
   return embeddings;
+}
+
+export async function getUserCount(): Promise<number> {
+  if (!db) throw new Error('Database not initialized');
+  const [result] = await db.executeSql('SELECT COUNT(*) as count FROM face_embeddings');
+  return result.rows.item(0).count;
 }
 
 export async function deleteEmbedding(userId: string): Promise<void> {
@@ -147,6 +156,14 @@ export async function getUnsyncedAttempts(): Promise<AuthAttempt[]> {
     });
   }
   return attempts;
+}
+
+export async function getPendingCount(): Promise<number> {
+  if (!db) throw new Error('Database not initialized');
+  const [result] = await db.executeSql(
+    'SELECT COUNT(*) as count FROM auth_attempts WHERE synced = 0'
+  );
+  return result.rows.item(0).count;
 }
 
 export async function markAttemptsSynced(ids: string[]): Promise<void> {
@@ -201,4 +218,16 @@ export async function getSuccessfulAuthCount(userId?: string): Promise<number> {
     : "SELECT COUNT(*) as count FROM auth_attempts WHERE result = 'SUCCESS'";
   const [result] = await db.executeSql(query, userId ? [userId] : []);
   return result.rows.item(0).count;
+}
+
+export async function clearAllData(): Promise<void> {
+  if (!db) throw new Error('Database not initialized');
+  await db.executeSql('DELETE FROM auth_attempts');
+  await db.executeSql('DELETE FROM face_embeddings');
+  await db.executeSql('DELETE FROM sync_queue');
+}
+
+export async function clearAuthHistory(): Promise<void> {
+  if (!db) throw new Error('Database not initialized');
+  await db.executeSql('DELETE FROM auth_attempts');
 }
