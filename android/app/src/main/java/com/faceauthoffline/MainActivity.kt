@@ -8,7 +8,7 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 class MainActivity : ReactActivity() {
 
-  override fun getMainComponentName(): String = "FaceAuthOffline"
+  override fun getMainComponentName(): String = "VisorAI"
 
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName!!, fabricEnabled)
