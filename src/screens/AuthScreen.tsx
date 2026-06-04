@@ -16,6 +16,7 @@ import { LivenessChallengeView } from '../components/LivenessChallenge';
 import { AuthResultModal } from '../components/AuthResultModal';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { authenticateUser, getRandomChallenges } from '../services/AuthService';
+import { createSession } from '../services/SessionService';
 import { NativeFaceAuth } from '../native/FaceAuthBridge';
 import { setProcessing, setLastResult, setCameraActive } from '../store/authSlice';
 import type { RootState } from '../store/store';
@@ -26,10 +27,11 @@ const { width } = Dimensions.get('window');
 type FlowState = 'IDLE' | 'DETECTING_FACE' | 'LIVENESS' | 'MATCHING' | 'RESULT';
 
 interface Props {
+  navigation: any;
   onBack: () => void;
 }
 
-export const AuthScreen: React.FC<Props> = ({ onBack }) => {
+export const AuthScreen: React.FC<Props> = ({ navigation, onBack }) => {
   const device = useCameraDevice('front');
   const dispatch = useDispatch();
   const { isProcessing } = useSelector((s: RootState) => s.auth);
@@ -238,7 +240,32 @@ export const AuthScreen: React.FC<Props> = ({ onBack }) => {
       )}
 
       {flowState === 'RESULT' && authResult && (
-        <AuthResultModal result={authResult} onDismiss={handleResultDismiss} />
+        <AuthResultModal
+          result={authResult}
+          onDismiss={handleResultDismiss}
+          onSuccess={async () => {
+            // On success, create session and navigate to personal dashboard
+            if (authResult.success && authResult.userId && authResult.userName) {
+              try {
+                console.log('[AUTH] Creating session for user:', authResult.userId);
+                await createSession(authResult.userId, authResult.userName);
+                console.log('[AUTH] Session created successfully');
+
+                // Wait a moment to ensure session is fully persisted
+                await new Promise(r => setTimeout(r, 500));
+
+                // Navigate directly to personal dashboard
+                console.log('[AUTH] Navigating to PersonalDashboard');
+                navigation.navigate('PersonalDashboard');
+              } catch (err: any) {
+                console.error('[AUTH] Failed to create session:', err);
+                Alert.alert('Error', 'Failed to create session. Please try again.');
+              }
+            } else {
+              onBack();
+            }
+          }}
+        />
       )}
     </SafeAreaView>
   );

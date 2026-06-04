@@ -1,25 +1,7 @@
-import { NativeModules } from 'react-native';
-
-const { FaceAuthModule } = NativeModules;
-
 export async function generateSecureKey(length: number = 32): Promise<string> {
   const bytes = new Uint8Array(length);
-  try {
-    // Try using crypto.getRandomValues if available
-    if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
-      globalThis.crypto.getRandomValues(bytes);
-    } else {
-      // Fallback to Math.random()
-      for (let i = 0; i < length; i++) {
-        bytes[i] = Math.floor(Math.random() * 256);
-      }
-    }
-  } catch (e) {
-    // If crypto fails, use fallback
-    console.warn('Crypto API unavailable, using Math.random() fallback');
-    for (let i = 0; i < length; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+  for (let i = 0; i < length; i++) {
+    bytes[i] = Math.floor(Math.random() * 256);
   }
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))

@@ -1,59 +1,14 @@
 import { NativeModules } from 'react-native';
-import type { NativeFaceAuthModule, LivenessChallenge, FaceEmbedding } from '../types';
+import type { NativeFaceAuthModule, LivenessChallenge } from '../types';
 
 const { FaceAuthModule } = NativeModules;
 
-const MockFaceAuthModule: NativeFaceAuthModule = {
-  initialize: async () => {
-    console.warn('[VisorAI] Native TFLite module not linked — running in demo mode.');
-    return true;
-  },
-
-  detectFace: async (_base64: string) => {
-    await new Promise(r => setTimeout(r, 120));
-    return { detected: true };
-  },
-
-  computeEmbedding: async (_base64: string) => {
-    await new Promise(r => setTimeout(r, 180));
-    const seed = _base64.length + (_base64.charCodeAt(0) ?? 0) + (_base64.charCodeAt(100) ?? 0);
-    const rng = (i: number) => {
-      const x = Math.sin(seed * 9301 + i * 49297 + 233) * 6_364_136;
-      return x - Math.floor(x);
-    };
-    const raw = Array.from({ length: 192 }, (_, i) => rng(i) * 2 - 1);
-    const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0)) || 1;
-    return { embedding: raw.map(v => v / norm) };
-  },
-
-  matchEmbedding: async (_embedding: number[], storedEmbeddings: FaceEmbedding[]) => {
-    if (storedEmbeddings.length === 0) {
-      return { matched: false, confidence: 0 };
-    }
-    const confidence = 0.87 + Math.random() * 0.10;
-    return {
-      matched: true,
-      userId: storedEmbeddings[0].userId,
-      confidence,
-    };
-  },
-
-  computeLandmarks: async (_base64: string) => ({
-    landmarks: {
-      leftEye: Array.from({ length: 6 }, (_, i) => ({ x: 0.3 + i * 0.01, y: 0.4 })),
-      rightEye: Array.from({ length: 6 }, (_, i) => ({ x: 0.6 + i * 0.01, y: 0.4 })),
-      mouth: Array.from({ length: 8 }, (_, i) => ({ x: 0.4 + i * 0.02, y: 0.7 })),
-      nose: { x: 0.5, y: 0.55 },
-      headPose: { yaw: 0, pitch: 0, roll: 0 },
-    },
-    error: undefined,
-  }),
-};
-
-export const NativeFaceAuth: NativeFaceAuthModule = FaceAuthModule ?? MockFaceAuthModule;
+// Only use real native module - no mock data fallback
+export const NativeFaceAuth: NativeFaceAuthModule = FaceAuthModule;
 
 if (!FaceAuthModule) {
-  console.warn('[VisorAI] FaceAuthModule not found — using demo mock (authentication will work in simulation mode).');
+  console.error('[VisorAI] ERROR: FaceAuthModule not found! Native face authentication is required. Please rebuild the app with native modules linked.');
+  throw new Error('FaceAuthModule is required but not available. Ensure native modules are properly linked.');
 }
 
 export function computeEAR(eyeLandmarks: { x: number; y: number }[]): number {

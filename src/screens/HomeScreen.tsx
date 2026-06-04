@@ -41,16 +41,90 @@ const PulseDot: React.FC<{ color: string }> = ({ color }) => {
   );
 };
 
-const ActionCard: React.FC<{
-  icon: string; label: string; sub: string; accent: string; onPress: () => void;
-}> = ({ icon, label, sub, accent, onPress }) => {
-  const sc = useRef(new Animated.Value(1)).current;
+const AnimatedStatCard: React.FC<{
+  label: string; val: string; color: string; index: number;
+}> = ({ label, val, color, index }) => {
+  const slideAnim = useRef(new Animated.Value(-50)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(index * 100),
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 70,
+          friction: 8,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
   return (
-    <Animated.View style={[styles.cardHalf, { transform: [{ scale: sc }] }]}>
+    <Animated.View
+      style={[
+        styles.statCard,
+        {
+          opacity: fadeAnim,
+          transform: [
+            { translateX: slideAnim },
+            { scale: scaleAnim },
+          ],
+        },
+      ]}
+    >
+      <Text style={[styles.statNum, { color }]}>{val}</Text>
+      <Text style={styles.statLbl}>{label}</Text>
+    </Animated.View>
+  );
+};
+
+const ActionCard: React.FC<{
+  icon: string; label: string; sub: string; accent: string; onPress: () => void; index: number;
+}> = ({ icon, label, sub, accent, onPress, index }) => {
+  const sc = useRef(new Animated.Value(0.8)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(index * 80),
+      Animated.parallel([
+        Animated.spring(sc, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ]),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.cardHalf,
+        {
+          opacity: fadeAnim,
+          transform: [
+            { scale: sc },
+            { rotateY: rotateAnim },
+          ],
+        },
+      ]}
+    >
       <TouchableOpacity
         style={styles.card}
         onPress={onPress}
-        onPressIn={() => Animated.spring(sc, { toValue: 0.95, useNativeDriver: true }).start()}
+        onPressIn={() => Animated.spring(sc, { toValue: 0.92, useNativeDriver: true }).start()}
         onPressOut={() => Animated.spring(sc, { toValue: 1, useNativeDriver: true }).start()}
         activeOpacity={1}
       >
@@ -69,6 +143,169 @@ const ActionCard: React.FC<{
   );
 };
 
+const AnimatedEngineRow: React.FC<{
+  icon: string;
+  label: string;
+  status: string;
+  color: string;
+  index: number;
+  hasBorder: boolean;
+}> = ({ icon, label, status, color, index, hasBorder }) => {
+  const slideAnim = useRef(new Animated.Value(-30)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(index * 120),
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.engineRow,
+        hasBorder && styles.engineRowBorder,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateX: slideAnim }],
+        },
+      ]}
+    >
+      <Text style={styles.engineIcon}>{icon}</Text>
+      <Text style={styles.engineLabel}>{label}</Text>
+      <View style={[styles.engineBadge, { borderColor: color + '55', backgroundColor: color + '15' }]}>
+        <Text style={[styles.engineStatus, { color }]}>{status}</Text>
+      </View>
+    </Animated.View>
+  );
+};
+
+const AnimatedPrimaryButton: React.FC<{
+  icon: string;
+  title: string;
+  sub: string;
+  onPress: () => void;
+  style?: any;
+  iconBgColor?: string;
+  arrowBgColor?: string;
+  arrowColor?: string;
+  titleColor?: string;
+}> = ({
+  icon,
+  title,
+  sub,
+  onPress,
+  style,
+  iconBgColor = 'rgba(255,255,255,0.18)',
+  arrowBgColor = 'rgba(255,255,255,0.2)',
+  arrowColor = '#fff',
+  titleColor = '#fff',
+}) => {
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
+        },
+      ]}
+    >
+      <TouchableOpacity
+        style={style}
+        onPress={onPress}
+        activeOpacity={0.88}
+      >
+        <View style={styles.primaryLeft}>
+          <View style={[styles.primaryIcon, { backgroundColor: iconBgColor }]}>
+            <Text style={{ fontSize: 26 }}>{icon}</Text>
+          </View>
+          <View>
+            <Text style={[styles.primaryTitle, { color: titleColor }]}>{title}</Text>
+            <Text style={styles.primarySub}>{sub}</Text>
+          </View>
+        </View>
+        <View style={[styles.primaryArrow, { backgroundColor: arrowBgColor }]}>
+          <Text style={[styles.primaryArrowText, { color: arrowColor }]}>›</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+const AnimatedAlertBanner: React.FC<{
+  count: number;
+  onPress: () => void;
+}> = ({ count, onPress }) => {
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnim, {
+            toValue: -8,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: fadeAnim,
+        transform: [{ translateY: bounceAnim }],
+      }}
+    >
+      <TouchableOpacity style={styles.alertBanner} onPress={onPress}>
+        <View style={styles.alertLeft}>
+          <PulseDot color="#FFB300" />
+          <Text style={styles.alertText}>{count} record{count !== 1 ? 's' : ''} waiting to sync</Text>
+        </View>
+        <Text style={styles.alertAction}>Sync →</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
 export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
@@ -78,10 +315,27 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
   const [totalAuth, setTotalAuth] = useState(0);
   const isOnline = useSelector((s: RootState) => s.sync.isOnline);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-  }, [fadeAnim]);
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 70, friction: 8 }),
+    ]).start();
+
+    const rotateInterval = setInterval(() => {
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 8000,
+          useNativeDriver: true,
+        })
+      ).start();
+    }, 8100);
+
+    return () => clearInterval(rotateInterval);
+  }, [fadeAnim, scaleAnim, rotateAnim]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -155,47 +409,40 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             { label: 'SUCCESS', val: successRate, color: '#00E676' },
             { label: 'PENDING', val: `${pendingSync}`, color: pendingSync > 0 ? '#FFB300' : '#fff' },
             { label: 'AUTH TOTAL', val: `${totalAuth}`, color: '#fff' },
-          ].map(item => (
-            <View key={item.label} style={styles.statCard}>
-              <Text style={[styles.statNum, { color: item.color }]}>{item.val}</Text>
-              <Text style={styles.statLbl}>{item.label}</Text>
-            </View>
+          ].map((item, idx) => (
+            <AnimatedStatCard key={item.label} label={item.label} val={item.val} color={item.color} index={idx} />
           ))}
         </View>
 
         {/* PRIMARY — AUTHENTICATE */}
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => onNavigate('Auth')} activeOpacity={0.88}>
-          <View style={styles.primaryLeft}>
-            <View style={styles.primaryIcon}><Text style={{ fontSize: 26 }}>🔐</Text></View>
-            <View>
-              <Text style={styles.primaryTitle}>Authenticate Face</Text>
-              <Text style={styles.primarySub}>Liveness · 192D matching · AES-256</Text>
-            </View>
-          </View>
-          <View style={styles.primaryArrow}><Text style={styles.primaryArrowText}>›</Text></View>
-        </TouchableOpacity>
+        <AnimatedPrimaryButton
+          icon="🔐"
+          title="Authenticate Face"
+          sub="Liveness · 192D matching · AES-256"
+          onPress={() => onNavigate('Auth')}
+          style={styles.primaryBtn}
+        />
 
         {/* EMPLOYEE DASHBOARD — SECONDARY PRIMARY */}
-        <TouchableOpacity style={styles.empBtn} onPress={() => onNavigate('EmployeeDashboard')} activeOpacity={0.88}>
-          <View style={styles.primaryLeft}>
-            <View style={[styles.primaryIcon, { backgroundColor: 'rgba(123,47,255,0.18)' }]}><Text style={{ fontSize: 26 }}>👤</Text></View>
-            <View>
-              <Text style={[styles.primaryTitle, { color: '#C4B5FD' }]}>Employee Dashboard</Text>
-              <Text style={styles.primarySub}>Leave · Attendance · Check-in / Check-out</Text>
-            </View>
-          </View>
-          <View style={[styles.primaryArrow, { backgroundColor: 'rgba(123,47,255,0.2)' }]}>
-            <Text style={[styles.primaryArrowText, { color: '#C4B5FD' }]}>›</Text>
-          </View>
-        </TouchableOpacity>
+        <AnimatedPrimaryButton
+          icon="👤"
+          title="Employee Dashboard"
+          sub="Leave · Attendance · Check-in / Check-out"
+          onPress={() => onNavigate('EmployeeDashboard')}
+          style={styles.empBtn}
+          iconBgColor="rgba(123,47,255,0.18)"
+          arrowBgColor="rgba(123,47,255,0.2)"
+          arrowColor="#C4B5FD"
+          titleColor="#C4B5FD"
+        />
 
         {/* QUICK ACTIONS */}
         <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
         <View style={styles.actionGrid}>
-          <ActionCard icon="➕" label="Enroll User" sub="Register new face" accent="#7B2FFF" onPress={() => onNavigate('Enroll')} />
-          <ActionCard icon="📋" label="Auth Log" sub="View history" accent="#00D4FF" onPress={() => onNavigate('History')} />
-          <ActionCard icon="🛡️" label="Admin Panel" sub="Sync & manage" accent="#FF6B35" onPress={() => onNavigate('Admin')} />
-          <ActionCard icon="👥" label="Manage Staff" sub="All employees" accent="#00E676" onPress={() => onNavigate('EmployeeManagement')} />
+          <ActionCard icon="➕" label="Enroll User" sub="Register new face" accent="#7B2FFF" onPress={() => onNavigate('Enroll')} index={0} />
+          <ActionCard icon="📋" label="Auth Log" sub="View history" accent="#00D4FF" onPress={() => onNavigate('History')} index={1} />
+          <ActionCard icon="🛡️" label="Admin Panel" sub="Sync & manage" accent="#FF6B35" onPress={() => onNavigate('Admin')} index={2} />
+          <ActionCard icon="👥" label="Manage Staff" sub="All employees" accent="#00E676" onPress={() => onNavigate('EmployeeManagement')} index={3} />
         </View>
 
         {/* NEURAL ENGINE */}
@@ -208,25 +455,21 @@ export const HomeScreen: React.FC<Props> = ({ onNavigate }) => {
             { icon: '🔒', label: 'AES-256 SQLCipher', status: 'SECURE', color: '#00D4FF' },
             { icon: '☁️', label: 'AWS Sync Bridge', status: isOnline ? 'ONLINE' : 'STANDBY', color: isOnline ? '#00E676' : '#FFB300' },
           ].map((item, i) => (
-            <View key={i} style={[styles.engineRow, i < 4 && styles.engineRowBorder]}>
-              <Text style={styles.engineIcon}>{item.icon}</Text>
-              <Text style={styles.engineLabel}>{item.label}</Text>
-              <View style={[styles.engineBadge, { borderColor: item.color + '55', backgroundColor: item.color + '15' }]}>
-                <Text style={[styles.engineStatus, { color: item.color }]}>{item.status}</Text>
-              </View>
-            </View>
+            <AnimatedEngineRow
+              key={i}
+              icon={item.icon}
+              label={item.label}
+              status={item.status}
+              color={item.color}
+              index={i}
+              hasBorder={i < 4}
+            />
           ))}
         </View>
 
         {/* PENDING SYNC ALERT */}
         {pendingSync > 0 && (
-          <TouchableOpacity style={styles.alertBanner} onPress={() => onNavigate('Admin')}>
-            <View style={styles.alertLeft}>
-              <PulseDot color="#FFB300" />
-              <Text style={styles.alertText}>{pendingSync} record{pendingSync !== 1 ? 's' : ''} waiting to sync</Text>
-            </View>
-            <Text style={styles.alertAction}>Sync →</Text>
-          </TouchableOpacity>
+          <AnimatedAlertBanner count={pendingSync} onPress={() => onNavigate('Admin')} />
         )}
 
         {/* FOOTER */}

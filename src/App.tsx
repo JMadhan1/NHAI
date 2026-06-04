@@ -22,6 +22,7 @@ import { AdminScreen } from './screens/AdminScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { EmployeeDashboard } from './screens/EmployeeDashboard';
 import { EmployeeManagement } from './screens/EmployeeManagement';
+import { PersonalDashboard } from './screens/PersonalDashboard';
 
 const Stack = createStackNavigator();
 const { width } = Dimensions.get('window');
@@ -158,7 +159,26 @@ const AppContent: React.FC = () => {
           {p => <HomeScreen {...p} onNavigate={sc => p.navigation.navigate(sc)} />}
         </Stack.Screen>
         <Stack.Screen name="Auth">
-          {p => <AuthScreen {...p} onBack={() => p.navigation.goBack()} />}
+          {p => (
+            <AuthScreen
+              {...p}
+              onBack={() => {
+                // On successful auth, navigate to personal dashboard
+                p.navigation.navigate('PersonalDashboard');
+              }}
+            />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="PersonalDashboard">
+          {p => (
+            <PersonalDashboard
+              onLogout={() => p.navigation.goBack()}
+              onNavigateToProfile={(userId) => {
+                // Navigate to profile edit screen if needed
+                p.navigation.navigate('Settings');
+              }}
+            />
+          )}
         </Stack.Screen>
         <Stack.Screen name="Enroll">
           {p => <EnrollScreen {...p} onBack={() => p.navigation.goBack()} />}

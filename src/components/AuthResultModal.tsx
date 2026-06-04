@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Vibration,
+  ActivityIndicator,
 } from 'react-native';
 import type { AuthResult } from '../types';
 
@@ -15,11 +16,13 @@ const { width } = Dimensions.get('window');
 interface Props {
   result: AuthResult;
   onDismiss: () => void;
+  onSuccess?: () => void;
 }
 
-export const AuthResultModal: React.FC<Props> = ({ result, onDismiss }) => {
+export const AuthResultModal: React.FC<Props> = ({ result, onDismiss, onSuccess }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     Vibration.vibrate(result.success ? [0, 100] : [0, 100, 100, 100]);
@@ -27,7 +30,20 @@ export const AuthResultModal: React.FC<Props> = ({ result, onDismiss }) => {
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100 }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start();
-  }, [scaleAnim, opacityAnim, result.success]);
+
+    // Auto dismiss success after 2 seconds
+    if (result.success) {
+      const timer = setTimeout(() => {
+        if (onSuccess) {
+          setIsLoading(true);
+          onSuccess();
+        } else {
+          onDismiss();
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [scaleAnim, opacityAnim, result.success, onDismiss, onSuccess]);
 
   return (
     <View style={styles.backdrop}>
@@ -62,9 +78,35 @@ export const AuthResultModal: React.FC<Props> = ({ result, onDismiss }) => {
               : 'Model error — please retry'}
           </Text>
         )}
-        <TouchableOpacity style={styles.btn} onPress={onDismiss}>
-          <Text style={styles.btnText}>Try Again</Text>
-        </TouchableOpacity>
+
+        {result.success ? (
+          <View style={styles.successContainer}>
+            {isLoading ? (
+              <>
+                <ActivityIndicator size="large" color="#00E676" />
+                <Text style={styles.loadingText}>Loading dashboard…</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.successText}>Authentication Successful!</Text>
+                <Text style={styles.successSubtext}>Redirecting to home screen…</Text>
+              </>
+            )}
+          </View>
+        ) : (
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity style={[styles.btn, styles.primaryBtn]} onPress={onDismiss}>
+              <Text style={styles.btnText}>Try Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.secondaryBtn]}
+              onPress={onDismiss}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.btnText, styles.secondaryBtnText]}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.View>
     </View>
   );
@@ -94,6 +136,20 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 24, fontWeight: '700', color: '#fff' },
   statLabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)' },
   errorMsg: { fontSize: 14, color: '#ff8a80', textAlign: 'center', marginBottom: 16 },
-  btn: { backgroundColor: '#007AFF', borderRadius: 14, paddingHorizontal: 40, paddingVertical: 14, marginTop: 8 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+  buttonGroup: { flexDirection: 'column', gap: 12, width: '100%', marginTop: 12 },
+  btn: { borderRadius: 14, paddingHorizontal: 40, paddingVertical: 14, marginTop: 8 },
+  primaryBtn: { backgroundColor: '#007AFF' },
+  secondaryBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  secondaryBtnText: { color: 'rgba(255,255,255,0.8)' },
+
+  successContainer: { alignItems: 'center', marginTop: 12, gap: 8 },
+  successText: { fontSize: 18, fontWeight: '700', color: '#4CAF50' },
+  successSubtext: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+  loadingText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 8 },
 });

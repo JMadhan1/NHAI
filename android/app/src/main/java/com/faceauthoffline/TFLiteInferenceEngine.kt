@@ -95,29 +95,36 @@ class TFLiteInferenceEngine(private val context: Context) {
     return try {
       val interpreter = facemeshInterpreter ?: return FaceLandmarks(emptyList(), emptyList(), emptyList(), 0f to 0f, HeadPose(0f, 0f, 0f))
       val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 192, 192, true)
-      val inputBuffer = bitmapToByteBuffer(resizedBitmap)
+      val inputBuffer = bitmapToNormalizedByteBuffer(resizedBitmap)
 
-      val outputLandmarks = Array(1) { Array(1) { FloatArray(468 * 3) } }
+      // MediaPipe face_landmark lite outputs [1, 468, 3]
+      val outputLandmarks = Array(1) { Array(468) { FloatArray(3) } }
       interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer), mapOf(0 to outputLandmarks))
 
-      val landmarks = outputLandmarks[0][0]
+      val landmarks = outputLandmarks[0] // shape [468, 3]
       val leftEye = mutableListOf<Pair<Float, Float>>()
       val rightEye = mutableListOf<Pair<Float, Float>>()
       val mouth = mutableListOf<Pair<Float, Float>>()
       var nose = 0f to 0f
 
       for (i in 0..5) {
-        leftEye.add(landmarks[i * 3] * bitmap.width to landmarks[i * 3 + 1] * bitmap.height)
+        leftEye.add(landmarks[i][0] * bitmap.width to landmarks[i][1] * bitmap.height)
       }
       for (i in 6..11) {
-        rightEye.add(landmarks[i * 3] * bitmap.width to landmarks[i * 3 + 1] * bitmap.height)
+        rightEye.add(landmarks[i][0] * bitmap.width to landmarks[i][1] * bitmap.height)
       }
       for (i in 12..19) {
-        mouth.add(landmarks[i * 3] * bitmap.width to landmarks[i * 3 + 1] * bitmap.height)
+        mouth.add(landmarks[i][0] * bitmap.width to landmarks[i][1] * bitmap.height)
       }
-      nose = landmarks[1 * 3] * bitmap.width to landmarks[1 * 3 + 1] * bitmap.height
+      nose = landmarks[1][0] * bitmap.width to landmarks[1][1] * bitmap.height
 
-      val headPose = estimateHeadPose(landmarks, bitmap.width, bitmap.height)
+      val flatLandmarks = FloatArray(468 * 3)
+      for (i in 0 until 468) {
+        flatLandmarks[i * 3] = landmarks[i][0]
+        flatLandmarks[i * 3 + 1] = landmarks[i][1]
+        flatLandmarks[i * 3 + 2] = landmarks[i][2]
+      }
+      val headPose = estimateHeadPose(flatLandmarks, bitmap.width, bitmap.height)
       FaceLandmarks(leftEye, rightEye, mouth, nose, headPose)
     } catch (e: Exception) {
       Log.e(TAG, "Landmark computation error: ${e.message}")
@@ -170,6 +177,23 @@ class TFLiteInferenceEngine(private val context: Context) {
       buffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
       buffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
       buffer.putFloat((pixel and 0xFF) / 255f)
+    }
+
+    buffer.rewind()
+    return buffer
+  }
+
+  // MediaPipe models expect [-1, 1] normalized input
+  private fun bitmapToNormalizedByteBuffer(bitmap: Bitmap): ByteBuffer {
+    val buffer = ByteBuffer.allocateDirect(4 * bitmap.width * bitmap.height * 3)
+    buffer.order(ByteOrder.nativeOrder())
+    val pixels = IntArray(bitmap.width * bitmap.height)
+    bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+
+    for (pixel in pixels) {
+      buffer.putFloat((((pixel shr 16) and 0xFF) / 127.5f) - 1.0f)
+      buffer.putFloat((((pixel shr 8) and 0xFF) / 127.5f) - 1.0f)
+      buffer.putFloat(((pixel and 0xFF) / 127.5f) - 1.0f)
     }
 
     buffer.rewind()

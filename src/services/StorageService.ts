@@ -1,8 +1,8 @@
 import SQLite from 'react-native-sqlite-storage';
 import * as Keychain from 'react-native-keychain';
-import { v4 as uuidv4 } from 'uuid';
 import type { FaceEmbedding, AuthAttempt, SyncQueueItem } from '../types';
 import { CONSTANTS } from '../utils/constants';
+import { setAttendanceDb } from './AttendanceService';
 
 SQLite.enablePromise(true);
 
@@ -68,6 +68,9 @@ export async function initDatabase(): Promise<void> {
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_auth_synced ON auth_attempts(synced);`);
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_auth_timestamp ON auth_attempts(timestamp);`);
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_queue_created ON sync_queue(created_at);`);
+
+  // Initialize attendance tables
+  await setAttendanceDb(db);
 }
 
 export async function saveEmbedding(embedding: FaceEmbedding): Promise<void> {
